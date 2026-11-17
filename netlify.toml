@@ -6,3 +6,5 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
+  # Valeurs publiques par nature (intégrées au site) : ne pas les signaler comme secrets
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_TURNSTILE_SITE_KEY,SITE_URL,ADMIN_EMAILS,EMAIL_FROM"
