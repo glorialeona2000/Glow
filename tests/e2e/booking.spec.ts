@@ -344,3 +344,41 @@ test("admin : prix, visibilité, congés et agenda", async ({ page, request }) =
   await page.goto("/admin/clientes?q=camille");
   await expect(page.getByText("camille.test@example.com", { exact: false })).toBeVisible();
 });
+
+test("mode « Bientôt disponible » : page d'attente, aperçu privé, publication depuis l'admin", async ({ page, browser, request }) => {
+  const { createHmac } = await import("node:crypto");
+  const token = createHmac("sha256", "local-dev-secret-local-dev-secret-0123456789").update("preview-v1").digest("base64url").slice(0, 32);
+  await sql`update site_content set value = '1' where key = 'coming_soon'`;
+  try {
+    // visiteur : page d'attente, ni pages ni réservation accessibles
+    const visitor = await (await browser.newContext({ baseURL: "http://localhost:3000" })).newPage();
+    await visitor.goto("/");
+    await expect(visitor.getByRole("heading", { name: "Notre écrin en ligne ouvre très bientôt" })).toBeVisible();
+    await visitor.goto("/reservation");
+    await expect(visitor.getByRole("heading", { name: "Notre écrin en ligne ouvre très bientôt" })).toBeVisible();
+    const [svc] = await sql`select id from services where name = 'Lash Lift sans coloration'`;
+    expect((await request.get(`/api/availability?service=${svc.id}&from=2030-01-01&to=2030-01-02`)).status()).toBe(403);
+    // mauvais code : toujours bloqué
+    await visitor.goto("/apercu?code=faux");
+    await expect(visitor.getByRole("heading", { name: "Notre écrin en ligne ouvre très bientôt" })).toBeVisible();
+    // bon code : aperçu complet
+    await visitor.goto(`/apercu?code=${token}`);
+    await expect(visitor.getByText("Aperçu privé")).toBeVisible();
+    await visitor.goto("/prestations");
+    await expect(visitor.getByRole("heading", { name: "Prestations", level: 1 })).toBeVisible();
+    await visitor.goto("/apercu?quitter=1");
+    await expect(visitor.getByRole("heading", { name: "Notre écrin en ligne ouvre très bientôt" })).toBeVisible();
+
+    // admin : publication en un clic
+    await loginOk(page);
+    await expect(page.getByText("Bientôt disponible", { exact: false }).first()).toBeVisible();
+    await page.goto("/admin/parametres");
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Publier le site" }).click();
+    await expect(page.getByText("Le site est en ligne", { exact: false }).first()).toBeVisible();
+    await visitor.goto("/");
+    await expect(visitor.getByRole("heading", { level: 1 })).not.toHaveText("Notre écrin en ligne ouvre très bientôt");
+  } finally {
+    await sql`update site_content set value = '0' where key = 'coming_soon'`;
+  }
+});

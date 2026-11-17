@@ -626,3 +626,20 @@ export async function saveGalleryItem(_p: FormState, fd: FormData): Promise<Form
     return fail(e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Mise en ligne (mode « Bientôt disponible »)
+// ---------------------------------------------------------------------------
+
+export async function setComingSoon(_p: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  try {
+    const on = s(fd, "on") === "1";
+    await db()`insert into site_content (key, value, updated_at) values ('coming_soon', ${on ? "1" : "0"}, now())
+               on conflict (key) do update set value = excluded.value, updated_at = now()`;
+    revalidatePath("/", "layout");
+    return ok(on ? "Mode « Bientôt disponible » activé : les visiteurs voient la page d’attente." : "🎉 Le site est en ligne : tout le monde peut le voir et réserver.");
+  } catch (e) {
+    return fail(e);
+  }
+}

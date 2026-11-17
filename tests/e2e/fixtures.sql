@@ -5,3 +5,6 @@ insert into working_hours (weekday, start_time, end_time)
 select d, '09:00', '19:00' from generate_series(1, 7) d;
 insert into breaks (weekday, start_time, end_time, label) select d, '12:30', '13:30', 'Pause' from generate_series(1, 7) d;
 update settings set min_notice_hours = 0, buffer_min = 15, slot_interval_min = 30, max_days_ahead = 60, max_requests_per_hour = 50;
+
+-- Les tests portent sur le site publié (mode « Bientôt disponible » désactivé)
+insert into site_content (key, value) values ('coming_soon', '0') on conflict (key) do update set value = excluded.value;

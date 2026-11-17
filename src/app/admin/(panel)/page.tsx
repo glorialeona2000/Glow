@@ -4,6 +4,7 @@ import { bookingsBetween, pendingBookings } from "@/lib/admin-data";
 import { getCatalog, getSchedule, getSettings, servicePricing } from "@/lib/data";
 import { addDays, toDateStr, zonedToUtc, formatDateLong } from "@/lib/time";
 import { emailConfigured } from "@/lib/email";
+import { comingSoonEnabled } from "@/lib/launch";
 import { BookingCard } from "@/components/admin/BookingCard";
 import { Card, Empty, PageTitle } from "@/components/admin/ui";
 import { PendingActions } from "./PendingActions";
@@ -24,6 +25,7 @@ export default async function Dashboard() {
   const unpriced = catalog.flatMap((c) => c.services).filter((s) => s.visible && s.booking_mode === "appointment" && !servicePricing(s).bookable);
 
   const todo: { text: string; href: string }[] = [];
+  if (await comingSoonEnabled()) todo.push({ text: "Le site est en mode « Bientôt disponible » (non publié). Aperçu et publication : Paramètres.", href: "/admin/parametres" });
   if (!schedule.hours.length) todo.push({ text: "Définir vos horaires de travail (aucun créneau n’est proposé pour l’instant).", href: "/admin/disponibilites" });
   if (unpriced.length) todo.push({ text: `${unpriced.length} prestation(s) sans prix ou durée : elles ne sont pas réservables en ligne.`, href: "/admin/prestations" });
   if (!emailConfigured()) todo.push({ text: "Le service d’e-mail n’est pas configuré : aucun e-mail n’est envoyé.", href: "/admin/parametres" });

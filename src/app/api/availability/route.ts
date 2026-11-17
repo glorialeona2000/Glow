@@ -3,6 +3,7 @@ import { availableSlots, bookingErrorMessage, resolveSelection } from "@/lib/boo
 import { bookableWindow } from "@/lib/availability";
 import { getSettings } from "@/lib/data";
 import { daysBetween, formatTime, isValidDateStr } from "@/lib/time";
+import { isLockedForVisitor } from "@/lib/launch";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ const UUID = /^[0-9a-f-]{36}$/;
 
 /** GET /api/availability?service=…&variant=…&options=a,b&from=YYYY-MM-DD&to=YYYY-MM-DD */
 export async function GET(req: NextRequest) {
+  if (await isLockedForVisitor()) return NextResponse.json({ error: "Bientôt disponible" }, { status: 403 });
   const q = req.nextUrl.searchParams;
   const service = q.get("service") ?? "";
   const variant = q.get("variant") || null;

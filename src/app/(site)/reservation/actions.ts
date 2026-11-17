@@ -4,6 +4,7 @@ import { z } from "zod";
 import { BookingError, bookingErrorMessage, createBooking, notifyNewBooking } from "@/lib/bookings";
 import { clientIp, hashIp, verifyTurnstile } from "@/lib/security";
 import { trainingSchema, weddingSchema } from "@/lib/quote";
+import { isLockedForVisitor } from "@/lib/launch";
 
 const schema = z.object({
   serviceId: z.uuid(),
@@ -33,6 +34,7 @@ export type BookingActionResult =
   | { ok: false; error: string; code?: string };
 
 export async function submitBooking(raw: unknown): Promise<BookingActionResult> {
+  if (await isLockedForVisitor()) return { ok: false, error: "La réservation en ligne ouvre bientôt." };
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };

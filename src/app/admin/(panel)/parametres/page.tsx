@@ -6,11 +6,13 @@ import { formatDateShort, formatTime } from "@/lib/time";
 import { centsToInput } from "@/lib/money";
 import { Card, PageTitle } from "@/components/admin/ui";
 import { SettingsForm, TestEmail } from "./SettingsForms";
+import { LaunchCard } from "./LaunchCard";
+import { comingSoonEnabled, previewToken } from "@/lib/launch";
 
 export const metadata = { title: "Paramètres" };
 
 export default async function SettingsPage() {
-  const settings = await getSettings();
+  const [settings, soon] = await Promise.all([getSettings(), comingSoonEnabled()]);
   const sql = db();
   const [log, jobs] = await Promise.all([
     sql<{ id: string; kind: string; recipient: string; status: string; error: string | null; created_at: Date; booking_id: string | null }[]>`
@@ -42,6 +44,7 @@ export default async function SettingsPage() {
           }}
         />
         <div className="space-y-6">
+          <LaunchCard soon={soon} previewUrl={`/apercu?code=${previewToken()}`} />
           <Card title="État technique">
             <ul className="space-y-2 text-sm">
               {checks.map(([k, ok, v]) => (
