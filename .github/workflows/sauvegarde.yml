@@ -1,0 +1,49 @@
+# Sauvegarde quotidienne chiffrée de la base de données (conservée 30 jours).
+# Restauration : voir docs/SAUVEGARDES.md
+name: Sauvegarde de la base
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Vérifier la configuration
+        id: check
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "Secrets de sauvegarde non configurés : sauvegarde ignorée."; echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Installer le client PostgreSQL 17
+        if: steps.check.outputs.skip != '1'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+      - name: Exporter et chiffrer
+        if: steps.check.outputs.skip != '1'
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FILE="belavica-$(date -u +%Y-%m-%d).dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$BACKUP_DATABASE_URL" --schema=public --format=custom --no-owner --no-privileges -f "$FILE"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 -o "$FILE.gpg" "$FILE"
+          shred -u "$FILE"
+          ls -lh "$FILE.gpg"
+      - name: Conserver la sauvegarde (30 jours)
+        if: steps.check.outputs.skip != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-${{ github.run_id }}
+          path: "*.gpg"
+          retention-days: 30
