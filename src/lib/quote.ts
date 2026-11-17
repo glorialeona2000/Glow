@@ -18,6 +18,18 @@ function dateFr(d: string) {
   );
 }
 
+export const trainingSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")).default(""),
+});
+export type TrainingDetails = z.infer<typeof trainingSchema>;
+
+/** Détails d'une demande (mariage ou formation) en lignes lisibles. */
+export function detailRows(d: Record<string, unknown> | null | undefined): [string, string][] {
+  if (!d) return [];
+  if (d.type === "formation") return d.startDate ? [["Début souhaité", dateFr(String(d.startDate))]] : [];
+  return weddingRows(d as Partial<WeddingDetails>);
+}
+
 /** Lignes lisibles (libellé, valeur) pour un récapitulatif. */
 export function weddingRows(d: Partial<WeddingDetails> | null | undefined): [string, string][] {
   if (!d || !d.date) return [];

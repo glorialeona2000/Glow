@@ -169,7 +169,7 @@ export async function createBooking(input: NewBooking) {
     const d = input.details as { date?: string } | undefined;
     if (!d?.date) throw new BookingError("invalid", "Merci d’indiquer la date de votre mariage.");
     if (d.date < toDateStr(new Date(), settings.timezone)) throw new BookingError("invalid", "La date du mariage doit être à venir.");
-  } else {
+  } else if (!(isRequest && (input.details as { type?: string } | undefined)?.type === "formation")) {
     input = { ...input, details: undefined };
   }
 

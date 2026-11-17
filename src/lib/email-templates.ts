@@ -1,6 +1,6 @@
 import { formatPrice } from "./money";
 import { formatDateLong, formatDuration, formatTime } from "./time";
-import { weddingRows, type WeddingDetails } from "./quote";
+import { detailRows, type WeddingDetails } from "./quote";
 
 export type BookingEmailData = {
   id: string;
@@ -16,7 +16,7 @@ export type BookingEmailData = {
   deposit_cents: number;
   client_comment: string;
   preferred_schedule: string;
-  details: Partial<WeddingDetails> | null;
+  details: (Partial<WeddingDetails> & { type?: string; startDate?: string }) | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -50,8 +50,8 @@ function rows(b: BookingEmailData, ctx: Ctx, withAddress = true): [string, strin
   if (b.duration_min) r.push(["Durée", formatDuration(b.duration_min)]);
   if (b.price_cents != null) r.push(["Prix total", formatPrice(b.price_cents)]);
   if (b.deposit_cents) r.push(["Acompte", formatPrice(b.deposit_cents)]);
-  if (b.kind === "request" && b.preferred_schedule) r.push(["Disponibilités", b.preferred_schedule]);
-  r.push(...weddingRows(b.details));
+  if (b.kind === "request" && b.preferred_schedule) r.push(["Dates idéales", b.preferred_schedule]);
+  r.push(...detailRows(b.details));
   if (withAddress) r.push(["Adresse", ctx.addressNotice]);
   r.push(["Référence", b.ref]);
   return r;

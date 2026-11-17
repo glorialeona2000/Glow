@@ -71,11 +71,11 @@ begin
    (s_russe, 'Extension', 'Allongement de l’ongle et construction en gel.', 7000, 150, 1),
    (s_russe, 'Remplissage', 'Entretien de votre construction en gel existante.', 6000, 120, 2);
 
-  -- French : uniquement sur la semi-permanente, +10 € et +10 minutes
+  -- French : semi-permanente et construction en gel (extension, remplissage), +10 € et +10 minutes
   insert into service_options (name, description, price_cents, duration_min, sort) values
    ('French manucure', 'Finition French élégante, ajoutée à votre manucure.', 1000, 10, 1)
    returning id into o_french;
-  insert into service_option_links (service_id, option_id) values (s_semi, o_french);
+  insert into service_option_links (service_id, option_id) values (s_semi, o_french), (s_russe, o_french);
 
   -- Faux cils : maquillage événementiel 80 € sans, 90 € avec
   insert into service_options (name, description, price_cents, duration_min, sort) values

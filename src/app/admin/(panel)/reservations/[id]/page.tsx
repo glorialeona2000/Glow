@@ -5,7 +5,7 @@ import { getSettings } from "@/lib/data";
 import { formatPrice, centsToInput } from "@/lib/money";
 import { formatDateLong, formatDuration, formatTime, toDateStr, minutesOfDay, minutesToTime } from "@/lib/time";
 import { manageUrl } from "@/lib/security";
-import { weddingRows } from "@/lib/quote";
+import { detailRows } from "@/lib/quote";
 import { Card, DEPOSIT_LABEL, PageTitle, StatusBadge } from "@/components/admin/ui";
 import { BookingActions } from "./BookingActions";
 
@@ -39,8 +39,8 @@ export default async function BookingPage({ params, searchParams }: { params: Pr
   if (b.duration_min) rows.push(["Durée", formatDuration(b.duration_min)]);
   if (b.price_cents != null) rows.push(["Prix total", formatPrice(b.price_cents)]);
   if (b.deposit_cents) rows.push(["Acompte", `${formatPrice(b.deposit_cents)} — ${DEPOSIT_LABEL[b.deposit_status]}`]);
-  if (b.preferred_schedule) rows.push(["Disponibilités", b.preferred_schedule]);
-  rows.push(...weddingRows(b.details));
+  if (b.preferred_schedule) rows.push(["Dates idéales", b.preferred_schedule]);
+  rows.push(...detailRows(b.details));
   if (b.client_comment) rows.push(["Commentaire", b.client_comment]);
   rows.push(["Origine", b.source === "admin" ? "Ajouté par vous" : "Réservation en ligne"]);
   rows.push(["Créée le", `${formatDateLong(b.created_at, tz)} à ${formatTime(b.created_at, tz)}`]);

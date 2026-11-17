@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/money";
 import { formatDuration } from "@/lib/time";
 import { ArrowLeft, ArrowRight, Check, Clock, InstagramIcon, Sparkle } from "@/components/icons";
 import { Turnstile } from "@/components/Turnstile";
-import { weddingRows } from "@/lib/quote";
+import { detailRows, weddingRows } from "@/lib/quote";
 
 export type WizardService = {
   id: string;
@@ -84,6 +84,7 @@ export function BookingWizard({
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", comment: "", preferredSchedule: "", website: "" });
   const [wedding, setWedding] = useState({ date: "", place: "", readyTime: "", people: 1, trial: null as boolean | null, touchUps: null as boolean | null });
+  const [trainingStart, setTrainingStart] = useState("");
   const [consent, setConsent] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [result, setResult] = useState<Extract<BookingActionResult, { ok: true }> | null>(null);
@@ -191,6 +192,7 @@ export function BookingWizard({
         ...form,
         consent,
         wedding: isQuote ? { ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps } : null,
+        training: isTraining ? { startDate: trainingStart } : null,
         elapsedMs: Date.now() - startedAt.current,
         turnstileToken,
       });
@@ -222,7 +224,7 @@ export function BookingWizard({
     service: "Prestation",
     options: "Options",
     datetime: "Date & heure",
-    details: isQuote ? "Votre demande" : "Coordonnées",
+    details: isRequest ? "Votre demande" : "Coordonnées",
     review: "Confirmation",
     done: "",
   };
@@ -578,6 +580,45 @@ export function BookingWizard({
                 />
               </div>
             )}
+            {isTraining && category && (
+              <div className="mb-10 space-y-6">
+                <div className="border-b border-ink/10 pb-6 text-center">
+                  <Sparkle className="mx-auto size-3 text-champagne" />
+                  <h2 className="display mt-4 text-3xl">Votre formation</h2>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-taupe">
+                    Indiquez la formule et vos dates idéales : je vous recontacte pour construire ensemble votre planning.
+                  </p>
+                </div>
+                <fieldset>
+                  <legend className="label">Formule *</legend>
+                  <div className="space-y-2">
+                    {category.services
+                      .filter((x) => x.booking_mode === "request" && x.bookable)
+                      .map((x) => (
+                        <button
+                          key={x.id}
+                          type="button"
+                          aria-pressed={x.id === serviceId}
+                          onClick={() => setServiceId(x.id)}
+                          className={`flex w-full items-center justify-between gap-4 border p-4 text-left transition-colors duration-300 ${
+                            x.id === serviceId ? "border-ink bg-ink text-ivory" : "border-stone bg-white hover:border-ink"
+                          }`}
+                        >
+                          <span>
+                            <span className="display block text-lg">{x.name.replace(/^Formation maquillage — /, "Formation ")}</span>
+                            {x.note && <span className={`mt-1 block text-xs ${x.id === serviceId ? "text-ivory/70" : "text-mute"}`}>{x.note.split(".")[0]}</span>}
+                          </span>
+                          {x.price_cents != null && <span className="shrink-0">{formatPrice(x.price_cents)}</span>}
+                        </button>
+                      ))}
+                  </div>
+                </fieldset>
+                <div>
+                  <label className="label" htmlFor="t-start">Date de début souhaitée</label>
+                  <input id="t-start" type="date" min={todayStr()} className="field" value={trainingStart} onChange={(e) => setTrainingStart(e.target.value)} />
+                </div>
+              </div>
+            )}
             <h2 className="display text-2xl">Vos coordonnées</h2>
             <p className="text-sm text-taupe">Aucun compte à créer. Ces informations servent uniquement à {isQuote ? "vous envoyer votre devis" : "gérer votre rendez-vous"}.</p>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -589,14 +630,14 @@ export function BookingWizard({
             {isTraining && (
               <div>
                 <label className="label" htmlFor="pref">
-                  Vos disponibilités et objectifs *
+                  Vos dates idéales et disponibilités *
                 </label>
                 <textarea
                   id="pref"
                   className="field min-h-28"
                   maxLength={800}
                   required
-                  placeholder="Ex. : en semaine après 17 h, ou le samedi matin. Débutante, je souhaite apprendre…"
+                  placeholder="Ex. : en semaine après 17 h, ou le samedi matin, à partir de mars"
                   value={form.preferredSchedule}
                   onChange={(e) => setForm({ ...form, preferredSchedule: e.target.value })}
                 />
@@ -604,7 +645,7 @@ export function BookingWizard({
             )}
             <div>
               <label className="label" htmlFor="comment">
-                {isQuote ? "Vos envies, votre style, vos inspirations (facultatif)" : "Commentaire (facultatif)"}
+                {isQuote ? "Vos envies, votre style, vos inspirations (facultatif)" : isTraining ? "Votre niveau et vos objectifs (facultatif)" : "Commentaire (facultatif)"}
               </label>
               <textarea
                 id="comment"
@@ -639,17 +680,18 @@ export function BookingWizard({
                 ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : []),
                 ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
                 ...(!isRequest && deposit ? [["Acompte", formatPrice(deposit)] as [string, string]] : []),
-                ...(isTraining ? [["Vos disponibilités", form.preferredSchedule] as [string, string]] : []),
+                ...(isTraining ? detailRows({ type: "formation", startDate: trainingStart }) : []),
+                ...(isTraining ? [["Dates idéales", form.preferredSchedule] as [string, string]] : []),
                 ["Coordonnées", `${form.firstName} ${form.lastName}\n${form.phone}\n${form.email}`],
                 ...(form.comment ? [[isQuote ? "Vos envies" : "Commentaire", form.comment] as [string, string]] : []),
-                ...(!isQuote ? [["Adresse", texts.address] as [string, string]] : []),
+                ...(!isRequest ? [["Adresse", texts.address] as [string, string]] : []),
               ]}
             />
             <div className="mt-6 space-y-3 text-sm leading-relaxed text-taupe">
               {isQuote ? (
                 <p>Je vous réponds personnellement avec un devis sur mesure (maquillage, essai, déplacement et retouches selon vos souhaits).</p>
               ) : isRequest ? (
-                <p>Votre demande sera étudiée personnellement : je vous recontacte pour construire votre planning de séances.</p>
+                <p>Votre demande sera étudiée personnellement : je vous recontacte pour construire votre planning de séances. Pas d’acompte : la formation se règle directement avec moi.</p>
               ) : (
                 <>
                   <p>
@@ -685,21 +727,29 @@ export function BookingWizard({
               <Check className="size-7" />
             </div>
             <p className="eyebrow mt-6 text-champagne">Référence {result.ref}</p>
-            <h1 className="display mt-3 text-3xl md:text-4xl">{isQuote ? "Demande de devis envoyée" : isRequest ? "Demande envoyée" : "Demande de rendez-vous envoyée"}</h1>
+            <h1 className="display mt-3 text-3xl md:text-4xl">{isQuote ? "Demande de devis envoyée" : isRequest ? "Demande de formation envoyée" : "Demande de rendez-vous envoyée"}</h1>
             <p className="mx-auto mt-5 max-w-lg leading-relaxed text-taupe">
-              {isQuote ? "Merci et toutes mes félicitations ! J’étudie votre demande et vous envoie très vite un devis personnalisé par e-mail." : texts.requestDone}
+              {isQuote
+                ? "Merci et toutes mes félicitations ! J’étudie votre demande et vous envoie très vite un devis personnalisé par e-mail."
+                : isTraining
+                  ? "Merci pour votre demande ! Je vous recontacte très vite pour fixer ensemble les dates de votre formation."
+                  : texts.requestDone}
             </p>
             <div className="mt-8 text-left">
               <Summary
                 rows={[
-                  ["Statut", isQuote ? "Devis en préparation" : "En attente de validation"],
+                  ["Statut", isQuote ? "Devis en préparation" : isTraining ? "Planning à convenir" : "En attente de validation"],
                   ["Prestation", variant ? `${service.name} — ${variant.name}` : service.name],
                   ...(options.length ? [["Options", options.map((o) => o.name).join(", ")] as [string, string]] : []),
                   ...(!isRequest && date && slot ? ([["Date", longDate(date)], ["Heure", slot.label]] as [string, string][]) : []),
                   ...(totalDuration ? [["Durée", formatDuration(totalDuration)] as [string, string]] : []),
                   ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
                   ...(!isRequest && deposit ? [["Acompte", formatPrice(deposit)] as [string, string]] : []),
-                  ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : [["Adresse", texts.address] as [string, string]]),
+                  ...(isQuote
+                    ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps })
+                    : isTraining
+                      ? detailRows({ type: "formation", startDate: trainingStart })
+                      : [["Adresse", texts.address] as [string, string]]),
                 ]}
               />
             </div>

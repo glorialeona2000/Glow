@@ -148,26 +148,38 @@ test("demande de devis mariage", async ({ page }) => {
   expect(mail.reply_to).toBe("ines@example.com"); // répondre directement à la cliente avec le devis
 });
 
-test("demande de formation (planification personnalisée)", async ({ page }) => {
+test("demande de formation (formulaire : formule, dates idéales)", async ({ page }) => {
   await page.goto("/reservation");
   await page.getByRole("button", { name: /Make-up/ }).click();
   await page.getByRole("button", { name: /Formation maquillage — 10 heures/ }).click();
-  await expect(page.getByLabel("Vos disponibilités et objectifs *")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Votre formation" })).toBeVisible();
+  await page.getByRole("button", { name: /Formation 20 heures/ }).click(); // changement de formule
+  const start = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(Date.now() + 60 * 86400000));
+  await page.getByLabel("Date de début souhaitée").fill(start);
+  await page.getByLabel("Vos dates idéales et disponibilités *").fill("Le samedi matin, à partir de mars");
   await page.getByLabel("Prénom *", { exact: true }).fill("Dina");
   await page.getByLabel("Nom *", { exact: true }).fill("Formation");
   await page.getByLabel("Téléphone *", { exact: true }).fill("+352 621 123 456");
   await page.getByLabel("E-mail *", { exact: true }).fill("dina@example.com");
-  await page.getByLabel("Vos disponibilités et objectifs *").fill("Le samedi matin, niveau débutante");
+  await page.getByLabel("Votre niveau et vos objectifs (facultatif)").fill("Débutante");
   await page.getByRole("button", { name: "Continuer" }).click();
+  await expect(page.locator("dd", { hasText: "800 €" })).toBeVisible();
+  await expect(page.getByText("Début souhaité")).toBeVisible();
   await page.getByRole("checkbox").check();
   await page.waitForTimeout(4200);
   await page.getByRole("button", { name: "Envoyer" }).click();
-  await expect(page.getByText("Demande envoyée")).toBeVisible();
+  await expect(page.getByText("Demande de formation envoyée")).toBeVisible();
   const [b] = await sql`select b.* from bookings b join clients c on c.id = b.client_id where c.email = 'dina@example.com'`;
   expect(b.kind).toBe("request");
+  expect(b.service_name).toBe("Formation maquillage — 20 heures");
   expect(b.starts_at).toBeNull();
   expect(b.preferred_schedule).toContain("samedi");
+  expect(b.details).toMatchObject({ type: "formation", startDate: start });
+  expect(b.price_cents).toBe(80000);
   expect(b.deposit_cents).toBe(0); // pas d'acompte pour les formations
+  const sent = await (await fetch("http://localhost:54321/__sent")).json();
+  const mail = sent.find((m: { to: string[]; subject: string }) => m.to[0] === "leona@belavica.com" && m.subject.includes("formation"));
+  expect(mail.html).toContain("Début souhaité");
 });
 
 test("champ piège anti-robot", async ({ page }) => {

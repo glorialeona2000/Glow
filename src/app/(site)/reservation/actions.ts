@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { BookingError, bookingErrorMessage, createBooking, notifyNewBooking } from "@/lib/bookings";
 import { clientIp, hashIp, verifyTurnstile } from "@/lib/security";
-import { weddingSchema } from "@/lib/quote";
+import { trainingSchema, weddingSchema } from "@/lib/quote";
 
 const schema = z.object({
   serviceId: z.uuid(),
@@ -21,6 +21,7 @@ const schema = z.object({
   comment: z.string().trim().max(800).default(""),
   preferredSchedule: z.string().trim().max(800).default(""),
   wedding: weddingSchema.nullable().optional(),
+  training: trainingSchema.nullable().optional(),
   consent: z.literal(true, { error: "Merci d’accepter les conditions." }),
   website: z.string().max(0).optional(), // champ piège anti-robot
   elapsedMs: z.number().int().nonnegative(),
@@ -57,7 +58,7 @@ export async function submitBooking(raw: unknown): Promise<BookingActionResult> 
       phone: d.phone,
       comment: d.comment,
       preferredSchedule: d.preferredSchedule,
-      details: d.wedding ? { type: "mariage", ...d.wedding } : undefined,
+      details: d.wedding ? { type: "mariage", ...d.wedding } : d.training ? { type: "formation", ...d.training } : undefined,
       source: "online",
       ipHash: hashIp(ip),
     });
