@@ -7,9 +7,10 @@ import { notifyStatus } from "@/lib/bookings";
 export const dynamic = "force-dynamic";
 
 function authorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 24) return false;
-  const given = Buffer.from((req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, ""));
+  // espaces ou retours à la ligne copiés par erreur : ignorés
+  const secret = process.env.CRON_SECRET?.trim().replace(/^"|"$/g, "");
+  if (!secret || secret.length < 16) return false;
+  const given = Buffer.from((req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().replace(/^"|"$/g, ""));
   const expected = Buffer.from(secret);
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
