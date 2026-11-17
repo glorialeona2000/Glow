@@ -20,5 +20,7 @@ jobs:
           if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
             echo "Secrets SITE_URL / CRON_SECRET non configurés : tâche ignorée."; exit 0
           fi
+          CLEAN=$(printf '%s' "$CRON_SECRET" | tr -d '\r\n' | sed 's/^ *//; s/ *$//; s/^"//; s/"$//')
+          echo "Empreinte CRON_SECRET (GitHub) : $(printf '%s' "$CLEAN" | sha256sum | cut -c1-8) (${#CLEAN} caractères)"
           curl --fail-with-body -sS -X POST "$SITE_URL/api/cron" \
             -H "Authorization: Bearer $CRON_SECRET" --retry 3 --retry-delay 20 --max-time 60

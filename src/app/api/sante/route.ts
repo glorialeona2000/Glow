@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +35,12 @@ export async function GET() {
     const err = e as { code?: string; message?: string };
     detail = `${err.code ?? ""} ${(err.message ?? "").replace(/postgres(ql)?:\/\/[^\s]+/g, "[adresse masquée]")}`.slice(0, 300);
   }
+  // Empreinte non réversible : permet de comparer avec GitHub sans révéler la valeur
+  const cron = process.env.CRON_SECRET?.trim().replace(/^"|"$/g, "") ?? "";
+  const cronFingerprint = cron ? `${createHash("sha256").update(cron).digest("hex").slice(0, 8)} (${cron.length} caractères)` : "absente";
   return NextResponse.json(
     {
+      empreinte_cron_secret: cronFingerprint,
       base_de_donnees: database,
       detail,
       connexion: { hote: host, port, utilisateur: user, crochets_restants: url.includes("[") || url.includes("]") },
