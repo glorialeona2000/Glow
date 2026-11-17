@@ -21,8 +21,14 @@ export async function GET() {
   let database = "ok";
   let detail = "";
   try {
-    const [r] = await db()<{ n: number }[]>`select count(*)::int as n from services`;
-    detail = `${r.n} prestations trouvées`;
+    const sql = db();
+    // plusieurs requêtes simultanées, comme sur les vraies pages
+    const [[r], [c], [h]] = await Promise.all([
+      sql<{ n: number }[]>`select count(*)::int as n from services`,
+      sql<{ n: number }[]>`select count(*)::int as n from categories`,
+      sql<{ n: number }[]>`select count(*)::int as n from working_hours`,
+    ]);
+    detail = `${r.n} prestations, ${c.n} catégories, ${h.n} plages horaires`;
   } catch (e) {
     database = "ERREUR";
     const err = e as { code?: string; message?: string };

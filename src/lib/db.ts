@@ -14,7 +14,12 @@ function createClient() {
   return postgres(url, {
     // Pooler Supabase (mode transaction) : pas de requêtes préparées
     prepare: false,
-    max: 3,
+    // Le pooler Supabase (Supavisor, port 6543) peut bloquer sur les requêtes
+    // envoyées en rafale sur une même connexion : une requête à la fois par connexion.
+    max_pipeline: 1,
+    max: 5,
+    // Ne jamais laisser une page attendre indéfiniment : erreur claire après 15 s.
+    query_timeout: 15,
     idle_timeout: 20,
     connect_timeout: 15,
     ssl: isLocal ? false : "require",
