@@ -208,7 +208,7 @@ test("espace admin protégé", async ({ page, request }) => {
   await expect(page).toHaveURL(/\/admin\/login/);
   expect((await request.post("/api/cron")).status()).toBe(401);
   expect((await request.post("/api/cron", { headers: { authorization: "Bearer mauvais" } })).status()).toBe(401);
-  const ok = await request.post("/api/cron", { headers: { authorization: `Bearer ${CRON_SECRET}` } });
+  const ok = await request.post("/api/cron", { headers: { "x-cron-secret": CRON_SECRET } });
   expect(ok.status()).toBe(200);
 });
 

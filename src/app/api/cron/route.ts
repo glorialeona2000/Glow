@@ -10,7 +10,9 @@ function authorized(req: NextRequest) {
   // espaces ou retours à la ligne copiés par erreur : ignorés
   const secret = process.env.CRON_SECRET?.trim().replace(/^"|"$/g, "");
   if (!secret || secret.length < 16) return false;
-  const given = Buffer.from((req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().replace(/^"|"$/g, ""));
+  // En-tête dédié : Netlify intercepte l'en-tête Authorization
+  const raw = req.headers.get("x-cron-secret") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const given = Buffer.from(raw.trim().replace(/^"|"$/g, ""));
   const expected = Buffer.from(secret);
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
