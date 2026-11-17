@@ -11,8 +11,8 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const sql = db();
   const [[service], categories, variants, options, links] = await Promise.all([
-    sql<{ id: string; category_id: string; name: string; description: string; highlights: string[]; note: string; price_cents: number | null; duration_min: number | null; booking_mode: string; sort: number; visible: boolean; archived_at: Date | null }[]>`
-      select id, category_id, name, description, highlights, note, price_cents, duration_min, booking_mode, sort, visible, archived_at from services where id = ${id}`,
+    sql<{ id: string; category_id: string; name: string; description: string; highlights: string[]; note: string; price_cents: number | null; duration_min: number | null; booking_mode: string; requires_deposit: boolean; sort: number; visible: boolean; archived_at: Date | null }[]>`
+      select id, category_id, name, description, highlights, note, price_cents, duration_min, booking_mode, requires_deposit, sort, visible, archived_at from services where id = ${id}`,
     sql<{ id: string; name: string }[]>`select id, name from categories order by sort`,
     sql<{ id: string; name: string; description: string; price_cents: number | null; duration_min: number | null; sort: number; visible: boolean }[]>`
       select id, name, description, price_cents, duration_min, sort, visible from service_variants where service_id = ${id} and archived_at is null order by sort, name`,

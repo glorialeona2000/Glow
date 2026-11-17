@@ -132,8 +132,8 @@ Sans Turnstile, le site reste protégé (champ piège, délai minimum, limite de
 
 Sur `https://belavica.com/admin` :
 
-1. **Disponibilités** : vos horaires de travail (ex. mardi–samedi 9h30–18h30), vos pauses, puis les règles (temps tampon, délai minimum, réservation jusqu'à X jours).
-2. **Prestations** : pour chaque prestation, le **prix** et la **durée**. Pour la manucure russe : prix et durée des formules *Renforcement* et *Extension*. Dans *Options* : le supplément et la durée de la **French**.
+1. **Disponibilités** : vos horaires (lundi–samedi 10h–20h) sont déjà enregistrés ; ajoutez vos congés et vérifiez les règles (temps tampon, délai minimum, réservation jusqu'à X jours).
+2. **Prestations** : vos prix et durées sont déjà enregistrés (novembre 2026). Relisez-les et ajustez-les ici si besoin.
    Une prestation sans prix ou sans durée reste visible mais n'est pas réservable.
 3. **Site** : relisez les textes (présentation, à propos, acompte, annulation). Ajoutez votre **numéro d'entreprise (BCE)** dès que vous l'avez (obligatoire en Belgique pour une activité enregistrée).
 4. **Paramètres** : cliquez **Envoyer un e-mail de test** → vérifiez la réception sur `leona@belavica.com`.

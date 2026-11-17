@@ -15,20 +15,22 @@ test("pages publiques accessibles, bouton Réserver visible sur mobile", async (
   await page.mouse.wheel(0, 3000);
   await expect(bar).toBeInViewport();
   await page.goto("/prestations");
-  await expect(page.getByText("Tarif bientôt disponible").first()).toBeVisible(); // pas de prix inventé
+  await expect(page.getByText("Tarif bientôt disponible")).toHaveCount(0); // tous les tarifs sont renseignés
   await expect(page.getByText("Vous n’avez rien à choisir à l’avance", { exact: false })).toBeVisible();
   await expect(page.getByText("Faux cils (+10 €)")).toBeVisible();
+  await expect(page.getByText("60 € · 2 h", { exact: true })).toBeVisible(); // remplissage gel
+  await expect(page.locator("li", { hasText: "Formation maquillage — 10 heures" }).getByText("450 €")).toBeVisible();
   await expect(page.locator("li", { hasText: "Maquillage mariée" }).getByText("Sur devis", { exact: true })).toBeVisible();
 });
 
 test("réservation complète : option French, récapitulatif et enregistrement", async ({ page }) => {
   const label = await bookUntilReview(page, {
     category: "Nails",
-    service: "Manucure russe",
+    service: "Manucure semi-permanente",
     option: "French manucure",
   });
-  await expect(page.getByText("2 h 30", { exact: true })).toBeVisible(); // construction gel 2 h 30
-  await expect(page.getByText("80 €", { exact: true })).toBeVisible(); // 70 € + French 10 €
+  await expect(page.getByText("1 h 10", { exact: true })).toBeVisible(); // 1 h + French 10 min
+  await expect(page.getByText("60 €", { exact: true })).toBeVisible(); // 50 € + French 10 €
   await expect(page.getByText("10 €", { exact: true }).first()).toBeVisible(); // acompte
   await expect(page.getByText("communiquée par message privé", { exact: false }).first()).toBeVisible();
   const confirm = page.getByRole("button", { name: "Confirmer" });
@@ -42,8 +44,8 @@ test("réservation complète : option French, récapitulatif et enregistrement",
 
   const [b] = await sql`select b.* from bookings b join clients c on c.id = b.client_id where c.email = 'camille.test@example.com'`;
   expect(b.status).toBe("pending");
-  expect(b.duration_min).toBe(150);
-  expect(b.price_cents).toBe(8000);
+  expect(b.duration_min).toBe(70);
+  expect(b.price_cents).toBe(6000);
   expect(b.deposit_cents).toBe(1000);
   expect(b.deposit_status).toBe("awaiting");
   expect(b.variant_name).toBeNull();
@@ -57,7 +59,7 @@ test("réservation complète : option French, récapitulatif et enregistrement",
 });
 
 test("le créneau réservé n'est plus proposé (durée + temps tampon)", async ({ request }) => {
-  const [b] = await sql`select service_id, variant_id, options, starts_at, block_until from bookings where status = 'pending' and kind = 'appointment' limit 1`;
+  const [b] = await sql`select service_id, variant_id, options, starts_at, block_until, duration_min from bookings where status = 'pending' and kind = 'appointment' order by created_at limit 1`;
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(b.starts_at);
   const res = await request.get(`/api/availability?service=${b.service_id}&options=${b.options[0].id}&from=${day}&to=${day}`);
   const data = await res.json();
@@ -66,7 +68,7 @@ test("le créneau réservé n'est plus proposé (durée + temps tampon)", async 
   const blockEnd = b.block_until.getTime();
   for (const s of slots) {
     const t = new Date(s).getTime();
-    const end = t + (150 + 15) * 60000;
+    const end = t + (b.duration_min + 15) * 60000;
     expect(t < blockEnd && start < end, `créneau ${s} chevauche`).toBe(false);
   }
 });
@@ -165,6 +167,7 @@ test("demande de formation (planification personnalisée)", async ({ page }) => 
   expect(b.kind).toBe("request");
   expect(b.starts_at).toBeNull();
   expect(b.preferred_schedule).toContain("samedi");
+  expect(b.deposit_cents).toBe(0); // pas d'acompte pour les formations
 });
 
 test("champ piège anti-robot", async ({ page }) => {
@@ -259,6 +262,23 @@ test("admin : rendez-vous manuel, chevauchement refusé, annulation tardive", as
   const id = page.url().split("/").pop()!.split("?")[0];
   await create("15:30", "autre@example.com");
   await expect(page.getByText("chevauche un autre rendez-vous", { exact: false })).toBeVisible();
+
+  // Séance de formation planifiée par l'admin : rendez-vous daté, sans acompte
+  await page.goto("/admin/reservations/nouvelle");
+  await page.locator("select[name=service_id]").selectOption({ label: "Make-up · Formation maquillage — 10 heures" });
+  const later = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(Date.now() + 30 * 86400000));
+  await page.locator("input[name=date]").fill(later);
+  await page.locator("input[name=time]").fill("10:00");
+  await page.locator("input[name=duration_min]").fill("120");
+  await page.locator("input[name=first_name]").fill("Dina");
+  await page.locator("input[name=last_name]").fill("Formation");
+  await page.locator("input[name=phone]").fill("+352 621 123 456");
+  await page.locator("input[name=email]").fill("dina2@example.com");
+  await page.getByRole("button", { name: "Créer le rendez-vous" }).click();
+  await expect(page.getByText("Rendez-vous créé.")).toBeVisible();
+  const [f] = await sql`select b.kind, b.starts_at, b.duration_min, b.deposit_cents, b.price_cents from bookings b join clients c on c.id = b.client_id where c.email = 'dina2@example.com'`;
+  expect(f).toMatchObject({ kind: "appointment", duration_min: 120, deposit_cents: 0, price_cents: 45000 });
+  expect(f.starts_at).not.toBeNull();
 
   // Annulation à moins de 48 h : case obligatoire, acompte conservé
   await page.goto(manageLink(id));

@@ -1,5 +1,6 @@
 -- Données de test (uniquement pour les tests automatiques) : horaires larges et règles souples.
 -- Les prix et durées sont ceux du catalogue réel (0002_seed.sql).
+delete from working_hours;
 insert into working_hours (weekday, start_time, end_time)
 select d, '09:00', '19:00' from generate_series(1, 7) d;
 insert into breaks (weekday, start_time, end_time, label) select d, '12:30', '13:30', 'Pause' from generate_series(1, 7) d;

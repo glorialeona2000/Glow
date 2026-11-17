@@ -30,6 +30,7 @@ export default async function ReservationPage({ searchParams }: { searchParams: 
           highlights: s.highlights,
           note: s.note,
           booking_mode: s.booking_mode,
+          requires_deposit: s.requires_deposit,
           price_cents: s.price_cents,
           duration_min: s.duration_min,
           bookable: p.bookable,

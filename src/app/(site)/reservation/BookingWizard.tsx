@@ -17,6 +17,7 @@ export type WizardService = {
   highlights: string[];
   note: string;
   booking_mode: "appointment" | "request" | "quote";
+  requires_deposit: boolean;
   price_cents: number | null;
   duration_min: number | null;
   bookable: boolean;
@@ -101,6 +102,7 @@ export function BookingWizard({
   const isRequest = !!service && service.booking_mode !== "appointment"; // pas de créneau à choisir
   const isQuote = service?.booking_mode === "quote"; // devis mariage
   const isTraining = service?.booking_mode === "request"; // formation
+  const deposit = service?.requires_deposit ? depositCents : 0;
   const needsOptions = !!service && !isRequest && (service.variants.length > 0 || service.options.length > 0);
 
   const totalDuration = service && !isRequest ? (variant ? variant.duration_min : service.duration_min ?? 0) + options.reduce((a, o) => a + o.duration_min, 0) : null;
@@ -636,7 +638,7 @@ export function BookingWizard({
                 ...(isQuote ? [["Tarif", "Sur devis"] as [string, string]] : []),
                 ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : []),
                 ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
-                ...(!isRequest && depositCents ? [["Acompte", formatPrice(depositCents)] as [string, string]] : []),
+                ...(!isRequest && deposit ? [["Acompte", formatPrice(deposit)] as [string, string]] : []),
                 ...(isTraining ? [["Vos disponibilités", form.preferredSchedule] as [string, string]] : []),
                 ["Coordonnées", `${form.firstName} ${form.lastName}\n${form.phone}\n${form.email}`],
                 ...(form.comment ? [[isQuote ? "Vos envies" : "Commentaire", form.comment] as [string, string]] : []),
@@ -653,7 +655,7 @@ export function BookingWizard({
                   <p>
                     <strong className="font-medium text-ink">Votre rendez-vous sera confirmé après validation.</strong> Le créneau vous est réservé en attendant.
                   </p>
-                  {texts.deposit && <p>{texts.deposit}</p>}
+                  {texts.deposit && deposit > 0 && <p>{texts.deposit}</p>}
                   <p>{texts.cancellation}</p>
                 </>
               )}
@@ -696,7 +698,7 @@ export function BookingWizard({
                   ...(!isRequest && date && slot ? ([["Date", longDate(date)], ["Heure", slot.label]] as [string, string][]) : []),
                   ...(totalDuration ? [["Durée", formatDuration(totalDuration)] as [string, string]] : []),
                   ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
-                  ...(!isRequest && depositCents ? [["Acompte", formatPrice(depositCents)] as [string, string]] : []),
+                  ...(!isRequest && deposit ? [["Acompte", formatPrice(deposit)] as [string, string]] : []),
                   ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : [["Adresse", texts.address] as [string, string]]),
                 ]}
               />

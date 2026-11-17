@@ -41,19 +41,22 @@ begin
 
   insert into services (category_id, name, description, booking_mode, sort) values
    (c_make, 'Cours d’auto-maquillage — Day Look', 'Apprenez à réaliser un maquillage de jour naturel, lumineux et élégant. Découvrez les techniques essentielles pour sublimer votre visage au quotidien.', 'appointment', 3),
-   (c_make, 'Cours d’auto-maquillage — Day & Night Look', 'Apprenez à réaliser un maquillage de jour et à le transformer en un maquillage de soirée plus sophistiqué. Une formation complète pour maîtriser deux looks et les techniques de transition.', 'appointment', 4),
-   (c_make, 'Formation maquillage — 10 heures', 'Programme de formation personnalisé de 10 heures consacré à l’apprentissage et au perfectionnement des techniques de maquillage.', 'request', 5),
-   (c_make, 'Formation maquillage — 20 heures', 'Programme approfondi de 20 heures permettant de développer et perfectionner différentes techniques de maquillage à travers un accompagnement personnalisé.', 'request', 6);
+   (c_make, 'Cours d’auto-maquillage — Day & Night Look', 'Apprenez à réaliser un maquillage de jour et à le transformer en un maquillage de soirée plus sophistiqué. Une formation complète pour maîtriser deux looks et les techniques de transition.', 'appointment', 4);
+  update services set price_cents = 12000, duration_min = 180 where name = 'Cours d’auto-maquillage — Day Look';
+  update services set price_cents = 16000, duration_min = 240 where name = 'Cours d’auto-maquillage — Day & Night Look';
 
-  update services set note = 'La formation se déroule en plusieurs séances. Envoyez une demande : nous construisons ensemble votre planning.'
-   where booking_mode = 'request';
+  insert into services (category_id, name, description, price_cents, note, booking_mode, requires_deposit, sort) values
+   (c_make, 'Formation maquillage — 10 heures', 'Programme de formation personnalisé de 10 heures consacré à l’apprentissage et au perfectionnement des techniques de maquillage.', 45000,
+    '10 heures réparties sur 5 jours. Envoyez une demande : nous construisons ensemble votre planning. Pas d’acompte : la formation se règle directement.', 'request', false, 5),
+   (c_make, 'Formation maquillage — 20 heures', 'Programme approfondi de 20 heures permettant de développer et perfectionner différentes techniques de maquillage à travers un accompagnement personnalisé.', 80000,
+    '20 heures réparties sur 10 jours. Envoyez une demande : nous construisons ensemble votre planning. Pas d’acompte : la formation se règle directement.', 'request', false, 6);
 
   insert into services (category_id, name, description, price_cents, duration_min, sort) values
    (c_lash, 'Lash Lift avec coloration des cils', 'Rehaussement des cils naturels associé à une coloration pour intensifier et définir le regard.', 5500, 50, 1),
    (c_lash, 'Lash Lift sans coloration', 'Rehaussement des cils naturels pour obtenir une courbure élégante et mettre en valeur le regard sans coloration.', 5000, 40, 2),
    (c_lash, 'Brow Lift avec coloration des sourcils', 'Restructuration et discipline des sourcils associées à une coloration pour un résultat défini et harmonieux.', 5500, 50, 3),
    (c_lash, 'Brow Lift sans coloration', 'Restructuration des sourcils pour discipliner les poils et obtenir une ligne harmonieuse et soignée.', 5000, 40, 4),
-   (c_lash, 'Épilation et mise en forme des sourcils', 'Épilation et restructuration de la ligne des sourcils selon la morphologie du visage.', 1500, null, 5);
+   (c_lash, 'Épilation et mise en forme des sourcils', 'Épilation et restructuration de la ligne des sourcils selon la morphologie du visage.', 1500, 20, 5);
 
   insert into services (category_id, name, description, price_cents, duration_min, sort) values
    (c_nails, 'Manucure classique', 'Soin esthétique des mains et des ongles naturels comprenant la préparation des ongles et l’application d’un vernis classique.', 4000, 45, 1)
@@ -61,15 +64,18 @@ begin
   insert into services (category_id, name, description, price_cents, duration_min, sort) values
    (c_nails, 'Manucure semi-permanente', 'Préparation des ongles naturels et application d’un vernis semi-permanent pour une finition soignée et durable.', 5000, 60, 2)
    returning id into s_semi;
-  insert into services (category_id, name, description, price_cents, duration_min, sort) values
-   (c_nails, 'Manucure russe & construction en gel', 'Manucure russe avec préparation minutieuse du contour de l’ongle et construction en gel pour créer une architecture harmonieuse, résistante et élégante.', 7000, 150, 3)
+  insert into services (category_id, name, description, sort) values
+   (c_nails, 'Manucure russe & construction en gel', 'Manucure russe avec préparation minutieuse du contour de l’ongle et construction en gel pour créer une architecture harmonieuse, résistante et élégante.', 3)
    returning id into s_russe;
+  insert into service_variants (service_id, name, description, price_cents, duration_min, sort) values
+   (s_russe, 'Extension', 'Allongement de l’ongle et construction en gel.', 7000, 150, 1),
+   (s_russe, 'Remplissage', 'Entretien de votre construction en gel existante.', 6000, 120, 2);
 
-  -- French : 80 € avec la construction en gel (70 € + 10 €)
+  -- French : uniquement sur la semi-permanente, +10 € et +10 minutes
   insert into service_options (name, description, price_cents, duration_min, sort) values
-   ('French manucure', 'Finition French élégante, ajoutée à votre manucure.', 1000, 0, 1)
+   ('French manucure', 'Finition French élégante, ajoutée à votre manucure.', 1000, 10, 1)
    returning id into o_french;
-  insert into service_option_links (service_id, option_id) values (s_russe, o_french);
+  insert into service_option_links (service_id, option_id) values (s_semi, o_french);
 
   -- Faux cils : maquillage événementiel 80 € sans, 90 € avec
   insert into service_options (name, description, price_cents, duration_min, sort) values
@@ -77,7 +83,7 @@ begin
    returning id into o_lashes;
   insert into service_option_links (service_id, option_id) values (s_event, o_lashes);
 
-  insert into services (category_id, name, description, highlights, note, duration_min, sort) values
+  insert into services (category_id, name, description, highlights, note, price_cents, duration_min, sort) values
    (c_facial, 'Soin du visage personnalisé — Bespoke Facial Treatment',
     'Offrez à votre peau un soin entièrement personnalisé, adapté à ses besoins et à ses caractéristiques. Chaque séance débute par une analyse de peau afin de sélectionner le protocole et les actifs les plus appropriés.',
     array[
@@ -88,7 +94,7 @@ begin
       'Hydratation : soin destiné à améliorer le confort et l’hydratation cutanée.'
     ],
     'Vous n’avez rien à choisir à l’avance : le protocole est déterminé sur place, après une analyse professionnelle de votre peau.',
-    60, 1);
+    7000, 60, 1);
 end $$;
 
 insert into gallery_items (image_url, alt, category, sort)
@@ -102,3 +108,8 @@ select * from (values
   ('/images/ongles-carres.webp',     'Construction en gel, forme carrée, rose nude', 'Nails', 7)
 ) as v(image_url, alt, category, sort)
 where not exists (select 1 from gallery_items);
+
+-- Horaires : du lundi au samedi, 10h–20h, sans pause
+insert into working_hours (weekday, start_time, end_time)
+select d, '10:00', '20:00' from generate_series(1, 6) d
+where not exists (select 1 from working_hours);

@@ -80,6 +80,7 @@ create table if not exists services (
   note         text not null default '',
   price_cents  int check (price_cents >= 0),
   duration_min int check (duration_min > 0 and duration_min <= 720),
+  requires_deposit boolean not null default true, -- acompte demandé pour cette prestation
   -- appointment : créneau réservable ; request : demande de planification (formations) ;
   -- quote : demande de devis (mariage : date, lieu, essai, retouches…)
   booking_mode text not null default 'appointment' check (booking_mode in ('appointment','request','quote')),

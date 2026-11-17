@@ -61,6 +61,7 @@ export type Service = {
   price_cents: number | null;
   duration_min: number | null;
   booking_mode: "appointment" | "request" | "quote";
+  requires_deposit: boolean;
   sort: number;
   visible: boolean;
   variants: Variant[];
@@ -94,7 +95,7 @@ export async function getCatalog(publicOnly = true): Promise<CatalogCategory[]> 
                     from categories ${publicOnly ? sql`where visible` : sql``} order by sort, name`,
     sql<Omit<Service, "variants" | "options">[]>`
       select id, category_id, name, description, highlights, note, price_cents, duration_min,
-             booking_mode, sort, visible
+             booking_mode, requires_deposit, sort, visible
       from services where archived_at is null ${publicOnly ? sql`and visible` : sql``}
       order by sort, name`,
     sql<Variant[]>`select id, service_id, name, description, price_cents, duration_min, sort, visible

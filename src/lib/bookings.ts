@@ -161,8 +161,10 @@ export async function createBooking(input: NewBooking) {
   const sql = db();
   const settings = await getSettings();
   const sel = await resolveSelection(input.serviceId, input.variantId, input.optionIds, input.source === "online");
-  const isRequest = sel.service.booking_mode !== "appointment";
-  const isQuote = sel.service.booking_mode === "quote";
+  // L'admin peut planifier directement une séance (formation, mariage) : c'est alors un rendez-vous daté.
+  const adminScheduled = input.source === "admin" && !!input.startsAt;
+  const isRequest = sel.service.booking_mode !== "appointment" && !adminScheduled;
+  const isQuote = sel.service.booking_mode === "quote" && !adminScheduled;
   if (isQuote) {
     const d = input.details as { date?: string } | undefined;
     if (!d?.date) throw new BookingError("invalid", "Merci d’indiquer la date de votre mariage.");
@@ -210,7 +212,8 @@ export async function createBooking(input: NewBooking) {
   }
 
   const status = input.source === "admin" ? "confirmed" : "pending";
-  const deposit = settings.deposit_enabled && !isRequest ? settings.deposit_cents : 0;
+  const deposit =
+    settings.deposit_enabled && sel.service.booking_mode === "appointment" && sel.service.requires_deposit ? settings.deposit_cents : 0;
   const depositStatus = deposit > 0 ? "awaiting" : "none";
   const optionsSnapshot = sel.options.map((o) => ({ id: o.id, name: o.name, price_cents: o.price_cents, duration_min: o.duration_min }));
 

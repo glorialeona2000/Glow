@@ -4,7 +4,7 @@ import { Card } from "@/components/admin/ui";
 import { archiveService, archiveVariant, saveService, saveVariant } from "../../../actions";
 import { centsToInput } from "@/lib/money";
 
-type Service = { id: string; category_id: string; name: string; description: string; highlights: string[]; note: string; price_cents: number | null; duration_min: number | null; booking_mode: string; sort: number; visible: boolean };
+type Service = { id: string; category_id: string; name: string; description: string; highlights: string[]; note: string; price_cents: number | null; duration_min: number | null; booking_mode: string; requires_deposit: boolean; sort: number; visible: boolean };
 type Variant = { id: string; name: string; description: string; price_cents: number | null; duration_min: number | null; sort: number; visible: boolean };
 
 export function ServiceEditor({
@@ -66,6 +66,7 @@ export function ServiceEditor({
               </div>
             </fieldset>
           )}
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="requires_deposit" defaultChecked={s.requires_deposit} className="accent-ink" /> Acompte demandé (montant défini dans Paramètres)</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="visible" defaultChecked={s.visible} className="accent-ink" /> Visible sur le site</label>
           <Submit>Enregistrer</Submit>
         </ActionForm>

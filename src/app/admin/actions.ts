@@ -312,7 +312,7 @@ export async function saveService(_p: FormState, fd: FormData): Promise<FormStat
     await sql.begin(async (tx) => {
       await tx`update services set category_id = ${id(fd, "category_id")}, name = ${name}, description = ${s(fd, "description", 2000)},
                  highlights = ${highlights}::text[], note = ${s(fd, "note", 1000)}, price_cents = ${price(fd, "price")},
-                 duration_min = ${duration}, booking_mode = ${mode}, sort = ${n(fd, "sort") ?? 0}, visible = ${b(fd, "visible")},
+                 duration_min = ${duration}, booking_mode = ${mode}, requires_deposit = ${b(fd, "requires_deposit")}, sort = ${n(fd, "sort") ?? 0}, visible = ${b(fd, "visible")},
                  updated_at = now()
                where id = ${sid}`;
       const opts = fd.getAll("option_ids").map(String).filter((x) => UUID.test(x));
