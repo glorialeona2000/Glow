@@ -31,7 +31,7 @@ test("réservation complète : option French, récapitulatif et enregistrement",
   });
   await expect(page.getByText("1 h 10", { exact: true })).toBeVisible(); // 1 h + French 10 min
   await expect(page.getByText("60 €", { exact: true })).toBeVisible(); // 50 € + French 10 €
-  await expect(page.getByText("10 €", { exact: true }).first()).toBeVisible(); // acompte
+  await expect(page.getByText("Acompte", { exact: true })).toHaveCount(0); // pas d'acompte
   await expect(page.getByText("communiquée par message privé", { exact: false }).first()).toBeVisible();
   const confirm = page.getByRole("button", { name: "Confirmer" });
   await expect(confirm).toBeDisabled(); // consentement obligatoire
@@ -46,8 +46,8 @@ test("réservation complète : option French, récapitulatif et enregistrement",
   expect(b.status).toBe("pending");
   expect(b.duration_min).toBe(70);
   expect(b.price_cents).toBe(6000);
-  expect(b.deposit_cents).toBe(1000);
-  expect(b.deposit_status).toBe("awaiting");
+  expect(b.deposit_cents).toBe(0);
+  expect(b.deposit_status).toBe("none");
   expect(b.variant_name).toBeNull();
   expect(b.options[0].name).toBe("French manucure");
   expect(new Intl.DateTimeFormat("fr-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(b.starts_at)).toBe(label);
@@ -292,16 +292,15 @@ test("admin : rendez-vous manuel, chevauchement refusé, annulation tardive", as
   expect(f).toMatchObject({ kind: "appointment", duration_min: 120, deposit_cents: 0, price_cents: 45000 });
   expect(f.starts_at).not.toBeNull();
 
-  // Annulation à moins de 48 h : case obligatoire, acompte conservé
+  // Annulation à moins de 48 h : enregistrée comme tardive (sans acompte, aucune case à cocher)
   await page.goto(manageLink(id));
   await page.getByRole("button", { name: "Annuler mon rendez-vous" }).click();
-  const confirm = page.getByRole("button", { name: "Confirmer" });
-  await expect(confirm).toBeDisabled();
-  await page.getByRole("checkbox").check();
-  await confirm.click();
-  await expect(page.getByRole("status").filter({ hasText: "Ce rendez-vous a été annulé. L’annulation étant intervenue tardivement" })).toBeVisible();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await page.getByRole("button", { name: "Confirmer" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Ce rendez-vous a été annulé." })).toBeVisible();
+  await expect(page.getByText("acompte", { exact: false })).toHaveCount(0);
   const [c] = await sql`select late_cancellation, deposit_status from bookings where id = ${id}`;
-  expect(c).toMatchObject({ late_cancellation: true, deposit_status: "forfeited" });
+  expect(c).toMatchObject({ late_cancellation: true, deposit_status: "none" });
 });
 
 test("admin : prix, visibilité, congés et agenda", async ({ page, request }) => {

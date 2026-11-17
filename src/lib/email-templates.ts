@@ -93,7 +93,7 @@ function layout(title: string, intro: string, table: [string, string][], ctx: Ct
   return { html, text };
 }
 
-const p = (s: string) => `<p style="margin:0 0 12px">${esc(s).replace(/\n/g, "<br>")}</p>`;
+const p = (s: string) => (s ? `<p style="margin:0 0 12px">${esc(s).replace(/\n/g, "<br>")}</p>` : "");
 
 function isQuote(b: BookingEmailData) {
   return !!b.details?.date;
@@ -181,7 +181,7 @@ export function cancelledEmail(b: BookingEmailData, ctx: Ctx, opts: { by: "clien
     opts.by === "client"
       ? "Votre annulation a bien été prise en compte."
       : `Votre rendez-vous a été annulé.${opts.reason ? `<br><br>${esc(opts.reason)}` : ""}`;
-  if (opts.late && opts.by === "client") intro += `<br><br>L’annulation intervenant moins de ${ctx.cancellationHours} heures avant le rendez-vous, l’acompte est conservé, conformément aux conditions de réservation.`;
+  if (opts.late && opts.by === "client" && b.deposit_cents > 0) intro += `<br><br>L’annulation intervenant moins de ${ctx.cancellationHours} heures avant le rendez-vous, l’acompte est conservé, conformément aux conditions de réservation.`;
   return {
     subject: `Rendez-vous annulé — BELAVICA`,
     ...layout("Rendez-vous annulé", intro, rows(b, ctx, false), ctx, "", { href: `${ctx.siteUrl}/reservation`, label: "Reprendre rendez-vous" }),
@@ -222,7 +222,7 @@ export function adminCancelledEmail(b: BookingEmailData, ctx: Ctx, adminUrl: str
     subject: `Annulation par la cliente — ${b.first_name} ${b.last_name}`,
     ...layout(
       "Annulation d’une cliente",
-      `${esc(b.first_name)} ${esc(b.last_name)} a annulé ${b.kind === "request" ? "sa demande" : "son rendez-vous"}.${late ? `<br><strong>Annulation tardive (moins de ${ctx.cancellationHours} h) : acompte conservé.</strong>` : ""}`,
+      `${esc(b.first_name)} ${esc(b.last_name)} a annulé ${b.kind === "request" ? "sa demande" : "son rendez-vous"}.${late ? `<br><strong>Annulation tardive (moins de ${ctx.cancellationHours} h)${b.deposit_cents > 0 ? " : acompte conservé" : ""}.</strong>` : ""}`,
       rows(b, ctx, false),
       ctx,
       "",

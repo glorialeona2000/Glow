@@ -16,7 +16,7 @@ create table if not exists settings (
   buffer_min            int  not null default 15  check (buffer_min between 0 and 240),
   min_notice_hours      int  not null default 24  check (min_notice_hours between 0 and 720),
   max_days_ahead        int  not null default 60  check (max_days_ahead between 1 and 365),
-  deposit_enabled       boolean not null default true,
+  deposit_enabled       boolean not null default false, -- pas d'acompte au lancement (activable dans l'admin)
   deposit_cents         int  not null default 1000 check (deposit_cents >= 0),
   cancellation_hours    int  not null default 48  check (cancellation_hours between 0 and 720),
   notification_email    text not null default 'leona@belavica.com',

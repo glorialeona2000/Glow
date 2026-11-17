@@ -62,13 +62,13 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
           <p className="mt-3 text-sm leading-relaxed text-taupe">
             Pour déplacer votre rendez-vous, annulez-le puis choisissez un nouveau créneau, ou écrivez-moi sur Instagram (@{content.instagram_handle}).
           </p>
-          <CancelForm token={token} late={late} hours={settings.cancellation_hours} isPending={b.status === "pending"} />
+          <CancelForm token={token} late={late && b.deposit_cents > 0} hours={settings.cancellation_hours} isPending={b.status === "pending"} />
         </div>
       ) : (
         <div className="mt-10 text-center">
           {b.status === "cancelled" && (
             <p role="status" className="mb-8 border-l-2 border-success bg-success/5 px-4 py-3 text-left text-sm text-success">
-              Ce rendez-vous a été annulé.{b.late ? " L’annulation étant intervenue tardivement, l’acompte est conservé." : ""}
+              Ce rendez-vous a été annulé.{b.late && b.deposit_cents > 0 ? " L’annulation étant intervenue tardivement, l’acompte est conservé." : ""}
             </p>
           )}
           {b.status === "declined" && (

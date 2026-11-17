@@ -9,8 +9,8 @@ Astuce iPhone : ouvrez la page dans Safari → *Partager* → **Sur l’écran d
 2. Vous recevez un e-mail « Nouvelle demande ». Dans **Tableau de bord** :
    - **Accepter** → la cliente reçoit la confirmation (acompte, conditions d’annulation, lien pour gérer son rendez-vous) ;
    - **Refuser** → elle reçoit un message (vous pouvez ajouter un mot), le créneau se libère.
-3. Acompte de 10 € : demandez-le par message privé, puis indiquez **Acompte reçu** dans la réservation (bloc *Suivi*).
-4. Annulation par la cliente : possible via son lien. Plus de 48 h avant → gratuite (un bandeau vous rappelle de rembourser l’acompte s’il était reçu) ; moins de 48 h → acompte marqué **conservé** automatiquement.
+3. Pas d’acompte au lancement. Si vous souhaitez en demander un plus tard : *Paramètres* → cocher « Demander un acompte » (puis suivi dans chaque réservation, bloc *Suivi*).
+4. Annulation par la cliente : possible via son lien. Si elle annule à moins de 48 h, la réservation est marquée « tardive » pour que vous le voyiez.
 
 ## Écrans
 

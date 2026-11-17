@@ -11,11 +11,11 @@ export async function cancelByClient(token: string, acknowledgedLate: boolean) {
     const { db } = await import("@/lib/db");
     const { getSettings } = await import("@/lib/data");
     const [[b], settings] = await Promise.all([
-      db()<{ status: string; starts_at: Date | null }[]>`select status, starts_at from bookings where id = ${id}`,
+      db()<{ status: string; starts_at: Date | null; deposit_cents: number }[]>`select status, starts_at, deposit_cents from bookings where id = ${id}`,
       getSettings(),
     ]);
     const late = b?.status === "confirmed" && !!b.starts_at && b.starts_at.getTime() - Date.now() < settings.cancellation_hours * 3600_000;
-    if (late && !acknowledgedLate) return { ok: false as const, error: "Merci de confirmer avoir pris connaissance de la perte de l’acompte." };
+    if (late && b.deposit_cents > 0 && !acknowledgedLate) return { ok: false as const, error: "Merci de confirmer avoir pris connaissance de la perte de l’acompte." };
     const res = await cancelBooking(id, "client");
     const mail = await notifyStatus(id, "cancelled", { by: "client", late: res.late });
     revalidatePath(`/rdv/${token}`);

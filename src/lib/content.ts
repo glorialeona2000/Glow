@@ -33,10 +33,10 @@ export const CONTENT_FIELDS: ContentField[] = [
     default: "Pour toute question, une demande particulière ou une prestation sur mesure, écrivez-moi sur Instagram : je vous réponds avec plaisir." },
   { key: "hours_notice", group: "Contact", label: "Mention horaires", type: "text", default: "Uniquement sur rendez-vous" },
   // Réservation
-  { key: "deposit_text", group: "Réservation", label: "Explication de l’acompte", type: "textarea",
+  { key: "deposit_text", group: "Réservation", label: "Explication de l’acompte (si activé dans Paramètres)", type: "textarea",
     default: "Un acompte de {acompte} est demandé pour confirmer chaque rendez-vous. Les modalités de paiement vous sont communiquées par message privé après validation de votre demande." },
   { key: "cancellation_text", group: "Réservation", label: "Conditions d’annulation", type: "textarea",
-    default: "Vous pouvez annuler gratuitement jusqu’à {delai} avant votre rendez-vous, via le lien reçu par e-mail. Passé ce délai, l’acompte est conservé." },
+    default: "Vous pouvez annuler ou déplacer votre rendez-vous jusqu’à {delai} à l’avance, via le lien reçu par e-mail. Merci de respecter ce délai : il permet de proposer le créneau à une autre cliente." },
   { key: "request_text", group: "Réservation", label: "Message après une demande", type: "textarea",
     default: "Votre demande a bien été transmise. Je la valide personnellement et vous recevrez une confirmation par e-mail dès que votre rendez-vous sera accepté." },
   // Mentions
