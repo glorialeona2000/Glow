@@ -23,4 +23,4 @@ jobs:
           CLEAN=$(printf '%s' "$CRON_SECRET" | tr -d '\r\n' | sed 's/^ *//; s/ *$//; s/^"//; s/"$//')
           echo "Empreinte CRON_SECRET (GitHub) : $(printf '%s' "$CLEAN" | sha256sum | cut -c1-8) (${#CLEAN} caractères)"
           curl --fail-with-body -sS -X POST "$SITE_URL/api/cron" \
-            -H "Authorization: Bearer $CRON_SECRET" --retry 3 --retry-delay 20 --max-time 60
+            -H "Authorization: Bearer $CLEAN" --retry 3 --retry-delay 20 --max-time 60
