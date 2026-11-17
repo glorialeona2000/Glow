@@ -34,7 +34,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                         {!s.visible && <span className="ml-2 text-xs font-normal text-mute">(masquée)</span>}
                       </span>
                       <span className={`text-sm md:w-64 md:text-right ${missing ? "text-warning" : "text-taupe"}`}>
-                        {s.booking_mode === "request"
+                        {s.booking_mode === "quote"
+                          ? "Sur devis (formulaire mariage)"
+                          : s.booking_mode === "request"
                           ? `Sur demande${s.price_cents != null ? ` · ${formatPrice(s.price_cents)}` : ""}`
                           : missing
                             ? "⚠ Prix / durée à compléter"

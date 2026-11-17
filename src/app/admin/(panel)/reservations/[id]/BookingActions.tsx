@@ -16,6 +16,7 @@ type B = {
   id: string;
   status: string;
   kind: string;
+  isQuote: boolean;
   deposit_status: string;
   admin_note: string;
   date: string;
@@ -63,10 +64,11 @@ export function BookingActions({ b }: { b: B }) {
       )}
 
       {b.kind === "request" && b.status === "pending" && (
-        <Card title="Demande de formation">
+        <Card title={b.isQuote ? "Demande de devis mariage" : "Demande de formation"}>
           <p className="text-sm text-taupe">
-            Contactez la cliente pour convenir du planning. Planifiez ci-dessous la première séance (la demande devient un rendez-vous), puis
-            ajoutez les séances suivantes avec « + Rendez-vous ».
+            {b.isQuote
+              ? "Envoyez votre devis à la cliente (répondez simplement à l’e-mail de notification). Une fois accepté, planifiez ci-dessous le jour J (et ajoutez l’essai avec « + Rendez-vous »)."
+              : "Contactez la cliente pour convenir du planning. Planifiez ci-dessous la première séance (la demande devient un rendez-vous), puis ajoutez les séances suivantes avec « + Rendez-vous »."}
           </p>
           <details id="refuser" className="mt-4 border-t border-ink/10 pt-4">
             <summary className="cursor-pointer text-sm underline">Refuser la demande</summary>
@@ -81,7 +83,7 @@ export function BookingActions({ b }: { b: B }) {
       )}
 
       {active && (
-        <Card title={b.kind === "request" ? "Planifier une séance" : "Modifier le rendez-vous"}>
+        <Card title={b.kind === "request" ? (b.isQuote ? "Planifier le rendez-vous" : "Planifier une séance") : "Modifier le rendez-vous"}>
           <ActionForm action={rescheduleBooking} className="space-y-4">
             <Hidden id={b.id} />
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

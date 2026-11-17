@@ -60,7 +60,7 @@ export type Service = {
   note: string;
   price_cents: number | null;
   duration_min: number | null;
-  booking_mode: "appointment" | "request";
+  booking_mode: "appointment" | "request" | "quote";
   sort: number;
   visible: boolean;
   variants: Variant[];
@@ -135,7 +135,7 @@ export function servicePricing(s: Service) {
       hasVariants: true,
     };
   }
-  const bookable = s.booking_mode === "request" || (s.price_cents != null && s.duration_min != null);
+  const bookable = s.booking_mode !== "appointment" || (s.price_cents != null && s.duration_min != null);
   return { bookable, fromPrice: s.price_cents, duration: s.duration_min, hasVariants: false };
 }
 

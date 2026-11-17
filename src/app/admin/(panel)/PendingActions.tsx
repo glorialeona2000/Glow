@@ -3,11 +3,11 @@ import Link from "next/link";
 import { ActionForm, Submit } from "@/components/admin/ActionForm";
 import { acceptBooking } from "../actions";
 
-export function PendingActions({ id, kind }: { id: string; kind: string }) {
+export function PendingActions({ id, kind, quote = false }: { id: string; kind: string; quote?: boolean }) {
   if (kind === "request") {
     return (
       <Link href={`/admin/reservations/${id}`} className="btn btn-outline min-h-10 shrink-0 px-4 md:mr-2">
-        Planifier
+        {quote ? "Voir le devis" : "Planifier"}
       </Link>
     );
   }

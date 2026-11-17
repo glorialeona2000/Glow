@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/money";
 import { formatDuration } from "@/lib/time";
 import { ArrowLeft, ArrowRight, Check, Clock, InstagramIcon, Sparkle } from "@/components/icons";
 import { Turnstile } from "@/components/Turnstile";
+import { weddingRows } from "@/lib/quote";
 
 export type WizardService = {
   id: string;
@@ -15,7 +16,7 @@ export type WizardService = {
   description: string;
   highlights: string[];
   note: string;
-  booking_mode: "appointment" | "request";
+  booking_mode: "appointment" | "request" | "quote";
   price_cents: number | null;
   duration_min: number | null;
   bookable: boolean;
@@ -68,7 +69,7 @@ export function BookingWizard({
     for (const c of categories) {
       const s = c.services.find((x) => x.id === initialServiceId && x.bookable);
       if (s) {
-        const st: Step = s.booking_mode === "request" ? "details" : s.variants.length || s.options.length ? "options" : "datetime";
+        const st: Step = s.booking_mode !== "appointment" ? "details" : s.variants.length || s.options.length ? "options" : "datetime";
         return { cat: c.id, svc: s.id as string | null, step: st };
       }
     }
@@ -81,6 +82,7 @@ export function BookingWizard({
   const [variantId, setVariantId] = useState<string | null>(null);
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "", comment: "", preferredSchedule: "", website: "" });
+  const [wedding, setWedding] = useState({ date: "", place: "", readyTime: "", people: 1, trial: null as boolean | null, touchUps: null as boolean | null });
   const [consent, setConsent] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [result, setResult] = useState<Extract<BookingActionResult, { ok: true }> | null>(null);
@@ -96,7 +98,9 @@ export function BookingWizard({
   const service = category?.services.find((s) => s.id === serviceId) ?? null;
   const variant = service?.variants.find((v) => v.id === variantId) ?? null;
   const options = service?.options.filter((o) => optionIds.includes(o.id)) ?? [];
-  const isRequest = service?.booking_mode === "request";
+  const isRequest = !!service && service.booking_mode !== "appointment"; // pas de créneau à choisir
+  const isQuote = service?.booking_mode === "quote"; // devis mariage
+  const isTraining = service?.booking_mode === "request"; // formation
   const needsOptions = !!service && !isRequest && (service.variants.length > 0 || service.options.length > 0);
 
   const totalDuration = service && !isRequest ? (variant ? variant.duration_min : service.duration_min ?? 0) + options.reduce((a, o) => a + o.duration_min, 0) : null;
@@ -184,6 +188,7 @@ export function BookingWizard({
         startsAt: isRequest ? null : slot?.iso ?? null,
         ...form,
         consent,
+        wedding: isQuote ? { ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps } : null,
         elapsedMs: Date.now() - startedAt.current,
         turnstileToken,
       });
@@ -206,7 +211,8 @@ export function BookingWizard({
     form.lastName.trim() &&
     /^\+?[0-9 ().\-/]{8,}$/.test(form.phone.trim()) &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) &&
-    (!isRequest || form.preferredSchedule.trim().length > 0);
+    (!isTraining || form.preferredSchedule.trim().length > 0) &&
+    (!isQuote || (wedding.date >= todayStr() && wedding.place.trim().length >= 2 && wedding.trial !== null && wedding.touchUps !== null));
 
   const stepIndex = steps.indexOf(step);
   const stepLabels: Record<Step, string> = {
@@ -214,7 +220,7 @@ export function BookingWizard({
     service: "Prestation",
     options: "Options",
     datetime: "Date & heure",
-    details: "Coordonnées",
+    details: isQuote ? "Votre demande" : "Coordonnées",
     review: "Confirmation",
     done: "",
   };
@@ -300,7 +306,7 @@ export function BookingWizard({
                         setVariantId(s.variants.length === 1 ? s.variants[0].id : null);
                         setOptionIds([]);
                         setError(null);
-                        const st: Step = s.booking_mode === "request" ? "details" : s.variants.length || s.options.length ? "options" : "datetime";
+                        const st: Step = s.booking_mode !== "appointment" ? "details" : s.variants.length || s.options.length ? "options" : "datetime";
                         go(st);
                       }}
                       className={`w-full border bg-white p-5 text-left transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -312,6 +318,8 @@ export function BookingWizard({
                         <p className="shrink-0 text-right text-sm">
                           {!s.bookable ? (
                             <span className="text-mute">Bientôt</span>
+                          ) : s.booking_mode === "quote" ? (
+                            <span>Sur devis</span>
                           ) : s.booking_mode === "request" ? (
                             <span>{s.price_cents != null ? formatPrice(s.price_cents) : "Sur demande"}</span>
                           ) : (
@@ -342,6 +350,9 @@ export function BookingWizard({
                       )}
                       {s.booking_mode === "request" && (
                         <p className="mt-3 text-xs tracking-[0.16em] uppercase text-champagne">Planification personnalisée</p>
+                      )}
+                      {s.booking_mode === "quote" && (
+                        <p className="mt-3 text-xs tracking-[0.16em] uppercase text-champagne">Demande de devis · Déplacement possible</p>
                       )}
                     </button>
                   </li>
@@ -519,15 +530,61 @@ export function BookingWizard({
             className="space-y-5"
             id="details-form"
           >
+            {isQuote && (
+              <div className="mb-10 space-y-6">
+                <div className="border-b border-ink/10 pb-6 text-center">
+                  <Sparkle className="mx-auto size-3 text-champagne" />
+                  <h2 className="display mt-4 text-3xl">Votre mariage</h2>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-taupe">
+                    Quelques informations pour préparer un devis sur mesure. Je me déplace sur le lieu de vos préparatifs.
+                  </p>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="label" htmlFor="w-date">Date du mariage *</label>
+                    <input id="w-date" type="date" required min={todayStr()} className="field" value={wedding.date} onChange={(e) => setWedding({ ...wedding, date: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="w-time">Prête pour (heure)</label>
+                    <input id="w-time" type="time" step={900} className="field" value={wedding.readyTime} onChange={(e) => setWedding({ ...wedding, readyTime: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label" htmlFor="w-place">Lieu des préparatifs *</label>
+                  <input id="w-place" className="field" required maxLength={200} placeholder="Ville, domaine ou adresse" value={wedding.place} onChange={(e) => setWedding({ ...wedding, place: e.target.value })} />
+                </div>
+                <div>
+                  <span className="label" id="w-people">Personnes à maquiller (mariée incluse) *</span>
+                  <div className="flex items-center gap-0 border border-stone bg-white" role="group" aria-labelledby="w-people">
+                    <button type="button" aria-label="Moins" className="flex size-12 items-center justify-center text-xl disabled:opacity-30" disabled={wedding.people <= 1} onClick={() => setWedding({ ...wedding, people: wedding.people - 1 })}>−</button>
+                    <span className="flex-1 text-center" aria-live="polite">
+                      <span className="display text-xl">{wedding.people}</span>
+                      <span className="ml-2 text-xs text-mute">{wedding.people === 1 ? "la mariée" : "personnes"}</span>
+                    </span>
+                    <button type="button" aria-label="Plus" className="flex size-12 items-center justify-center text-xl disabled:opacity-30" disabled={wedding.people >= 30} onClick={() => setWedding({ ...wedding, people: wedding.people + 1 })}>+</button>
+                  </div>
+                </div>
+                <Choice
+                  label="Souhaitez-vous un essai maquillage avant le jour J ? *"
+                  value={wedding.trial}
+                  onChange={(v) => setWedding({ ...wedding, trial: v })}
+                />
+                <Choice
+                  label="Souhaitez-vous que je reste pour les retouches en soirée ? *"
+                  value={wedding.touchUps}
+                  onChange={(v) => setWedding({ ...wedding, touchUps: v })}
+                />
+              </div>
+            )}
             <h2 className="display text-2xl">Vos coordonnées</h2>
-            <p className="text-sm text-taupe">Aucun compte à créer. Ces informations servent uniquement à gérer votre rendez-vous.</p>
+            <p className="text-sm text-taupe">Aucun compte à créer. Ces informations servent uniquement à {isQuote ? "vous envoyer votre devis" : "gérer votre rendez-vous"}.</p>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="Prénom" autoComplete="given-name" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} required />
               <Field label="Nom" autoComplete="family-name" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} required />
               <Field label="Téléphone" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required placeholder="+32 …" />
               <Field label="E-mail" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
             </div>
-            {isRequest && (
+            {isTraining && (
               <div>
                 <label className="label" htmlFor="pref">
                   Vos disponibilités et objectifs *
@@ -545,7 +602,7 @@ export function BookingWizard({
             )}
             <div>
               <label className="label" htmlFor="comment">
-                Commentaire (facultatif)
+                {isQuote ? "Vos envies, votre style, vos inspirations (facultatif)" : "Commentaire (facultatif)"}
               </label>
               <textarea
                 id="comment"
@@ -576,16 +633,20 @@ export function BookingWizard({
                 ...(options.length ? [["Options", options.map((o) => o.name).join(", ")] as [string, string]] : []),
                 ...(!isRequest && date && slot ? ([["Date", longDate(date)], ["Heure", slot.label]] as [string, string][]) : []),
                 ...(totalDuration ? [["Durée", formatDuration(totalDuration)] as [string, string]] : []),
+                ...(isQuote ? [["Tarif", "Sur devis"] as [string, string]] : []),
+                ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : []),
                 ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
                 ...(!isRequest && depositCents ? [["Acompte", formatPrice(depositCents)] as [string, string]] : []),
-                ...(isRequest ? [["Vos disponibilités", form.preferredSchedule] as [string, string]] : []),
+                ...(isTraining ? [["Vos disponibilités", form.preferredSchedule] as [string, string]] : []),
                 ["Coordonnées", `${form.firstName} ${form.lastName}\n${form.phone}\n${form.email}`],
-                ...(form.comment ? [["Commentaire", form.comment] as [string, string]] : []),
-                ["Adresse", texts.address],
+                ...(form.comment ? [[isQuote ? "Vos envies" : "Commentaire", form.comment] as [string, string]] : []),
+                ...(!isQuote ? [["Adresse", texts.address] as [string, string]] : []),
               ]}
             />
             <div className="mt-6 space-y-3 text-sm leading-relaxed text-taupe">
-              {isRequest ? (
+              {isQuote ? (
+                <p>Je vous réponds personnellement avec un devis sur mesure (maquillage, essai, déplacement et retouches selon vos souhaits).</p>
+              ) : isRequest ? (
                 <p>Votre demande sera étudiée personnellement : je vous recontacte pour construire votre planning de séances.</p>
               ) : (
                 <>
@@ -622,19 +683,21 @@ export function BookingWizard({
               <Check className="size-7" />
             </div>
             <p className="eyebrow mt-6 text-champagne">Référence {result.ref}</p>
-            <h1 className="display mt-3 text-3xl md:text-4xl">{isRequest ? "Demande envoyée" : "Demande de rendez-vous envoyée"}</h1>
-            <p className="mx-auto mt-5 max-w-lg leading-relaxed text-taupe">{texts.requestDone}</p>
+            <h1 className="display mt-3 text-3xl md:text-4xl">{isQuote ? "Demande de devis envoyée" : isRequest ? "Demande envoyée" : "Demande de rendez-vous envoyée"}</h1>
+            <p className="mx-auto mt-5 max-w-lg leading-relaxed text-taupe">
+              {isQuote ? "Merci et toutes mes félicitations ! J’étudie votre demande et vous envoie très vite un devis personnalisé par e-mail." : texts.requestDone}
+            </p>
             <div className="mt-8 text-left">
               <Summary
                 rows={[
-                  ["Statut", "En attente de validation"],
+                  ["Statut", isQuote ? "Devis en préparation" : "En attente de validation"],
                   ["Prestation", variant ? `${service.name} — ${variant.name}` : service.name],
                   ...(options.length ? [["Options", options.map((o) => o.name).join(", ")] as [string, string]] : []),
                   ...(!isRequest && date && slot ? ([["Date", longDate(date)], ["Heure", slot.label]] as [string, string][]) : []),
                   ...(totalDuration ? [["Durée", formatDuration(totalDuration)] as [string, string]] : []),
                   ...(totalPrice != null ? [["Prix total", formatPrice(totalPrice)] as [string, string]] : []),
                   ...(!isRequest && depositCents ? [["Acompte", formatPrice(depositCents)] as [string, string]] : []),
-                  ["Adresse", texts.address],
+                  ...(isQuote ? weddingRows({ ...wedding, trial: !!wedding.trial, touchUps: !!wedding.touchUps }) : [["Adresse", texts.address] as [string, string]]),
                 ]}
               />
             </div>
@@ -702,7 +765,7 @@ export function BookingWizard({
                 disabled={!consent || pending || (!!turnstileSiteKey && !turnstileToken)}
                 onClick={submit}
               >
-                {pending ? "Envoi…" : isRequest ? "Envoyer" : "Confirmer"}
+                {pending ? "Envoi…" : isQuote ? "Demander mon devis" : isRequest ? "Envoyer" : "Confirmer"}
               </button>
             )}
           </div>
@@ -732,6 +795,29 @@ function Field({
       </label>
       <input id={id} className="field" value={value} onChange={(e) => onChange(e.target.value)} maxLength={120} {...rest} />
     </div>
+  );
+}
+
+function Choice({ label, value, onChange }: { label: string; value: boolean | null; onChange: (v: boolean) => void }) {
+  return (
+    <fieldset>
+      <legend className="label">{label}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {([true, false] as const).map((v) => (
+          <button
+            key={String(v)}
+            type="button"
+            aria-pressed={value === v}
+            onClick={() => onChange(v)}
+            className={`min-h-12 border text-sm tracking-[0.12em] uppercase transition-colors duration-300 ${
+              value === v ? "border-ink bg-ink text-ivory" : "border-stone bg-white hover:border-ink"
+            }`}
+          >
+            {v ? "Oui" : "Non"}
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

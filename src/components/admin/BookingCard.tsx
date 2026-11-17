@@ -16,7 +16,7 @@ export function BookingCard({ b, showDate = true }: { b: BookingRow; showDate?: 
             {b.duration_min && <p className="text-xs text-mute">{formatDuration(b.duration_min)}</p>}
           </>
         ) : (
-          <p className="text-xs text-champagne">Formation</p>
+          <p className="text-xs text-champagne">{b.details?.date ? "Devis mariage" : "Formation"}</p>
         )}
       </div>
       <div className="min-w-0 flex-1">

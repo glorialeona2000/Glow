@@ -17,17 +17,18 @@ test("pages publiques accessibles, bouton Réserver visible sur mobile", async (
   await page.goto("/prestations");
   await expect(page.getByText("Tarif bientôt disponible").first()).toBeVisible(); // pas de prix inventé
   await expect(page.getByText("Vous n’avez rien à choisir à l’avance", { exact: false })).toBeVisible();
+  await expect(page.getByText("Faux cils (+10 €)")).toBeVisible();
+  await expect(page.locator("li", { hasText: "Maquillage mariée" }).getByText("Sur devis", { exact: true })).toBeVisible();
 });
 
-test("réservation complète : variante + option French, récapitulatif et enregistrement", async ({ page }) => {
+test("réservation complète : option French, récapitulatif et enregistrement", async ({ page }) => {
   const label = await bookUntilReview(page, {
     category: "Nails",
     service: "Manucure russe",
-    variant: "Extension",
     option: "French manucure",
   });
-  await expect(page.getByText("2 h 15", { exact: true })).toBeVisible(); // 120 + 15 min
-  await expect(page.getByText("80 €", { exact: true })).toBeVisible(); // 70 + 10 €
+  await expect(page.getByText("2 h 30", { exact: true })).toBeVisible(); // construction gel 2 h 30
+  await expect(page.getByText("80 €", { exact: true })).toBeVisible(); // 70 € + French 10 €
   await expect(page.getByText("10 €", { exact: true }).first()).toBeVisible(); // acompte
   await expect(page.getByText("communiquée par message privé", { exact: false }).first()).toBeVisible();
   const confirm = page.getByRole("button", { name: "Confirmer" });
@@ -41,11 +42,11 @@ test("réservation complète : variante + option French, récapitulatif et enreg
 
   const [b] = await sql`select b.* from bookings b join clients c on c.id = b.client_id where c.email = 'camille.test@example.com'`;
   expect(b.status).toBe("pending");
-  expect(b.duration_min).toBe(135);
+  expect(b.duration_min).toBe(150);
   expect(b.price_cents).toBe(8000);
   expect(b.deposit_cents).toBe(1000);
   expect(b.deposit_status).toBe("awaiting");
-  expect(b.variant_name).toBe("Extension");
+  expect(b.variant_name).toBeNull();
   expect(b.options[0].name).toBe("French manucure");
   expect(new Intl.DateTimeFormat("fr-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(b.starts_at)).toBe(label);
   const logs = await sql`select status from email_log where booking_id = ${b.id}`;
@@ -58,14 +59,14 @@ test("réservation complète : variante + option French, récapitulatif et enreg
 test("le créneau réservé n'est plus proposé (durée + temps tampon)", async ({ request }) => {
   const [b] = await sql`select service_id, variant_id, options, starts_at, block_until from bookings where status = 'pending' and kind = 'appointment' limit 1`;
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(b.starts_at);
-  const res = await request.get(`/api/availability?service=${b.service_id}&variant=${b.variant_id}&options=${b.options[0].id}&from=${day}&to=${day}`);
+  const res = await request.get(`/api/availability?service=${b.service_id}&options=${b.options[0].id}&from=${day}&to=${day}`);
   const data = await res.json();
   const slots: string[] = (data.days[day] ?? []).map((s: { iso: string }) => s.iso);
   const start = b.starts_at.getTime();
   const blockEnd = b.block_until.getTime();
   for (const s of slots) {
     const t = new Date(s).getTime();
-    const end = t + (135 + 15) * 60000;
+    const end = t + (150 + 15) * 60000;
     expect(t < blockEnd && start < end, `créneau ${s} chevauche`).toBe(false);
   }
 });
@@ -107,6 +108,42 @@ test("échec d'envoi d'e-mail : jamais présenté comme envoyé, et journalisé"
                          where c.email = 'echec@example.com' and l.recipient = 'echec@example.com'`;
   expect(logs[0].status).toBe("failed");
   expect(logs[0].error).toContain("Destinataire refusé");
+});
+
+test("demande de devis mariage", async ({ page }) => {
+  await page.goto("/prestations");
+  await page.locator("li", { hasText: "Maquillage mariée" }).getByRole("link", { name: /Demander un devis/ }).click();
+  await expect(page.getByRole("heading", { name: "Votre mariage" })).toBeVisible();
+  const continuer = page.getByRole("button", { name: "Continuer" });
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(Date.now() + 200 * 86400000));
+  await page.getByLabel("Date du mariage *").fill(day);
+  await page.getByLabel("Prête pour (heure)").fill("13:30");
+  await page.getByLabel("Lieu des préparatifs *").fill("Château de Messancy");
+  await page.getByRole("button", { name: "Plus" }).click();
+  await page.getByRole("button", { name: "Plus" }).click();
+  await page.getByRole("group", { name: "Souhaitez-vous un essai" }).getByRole("button", { name: "Oui" }).click();
+  await page.getByRole("group", { name: "Souhaitez-vous que je reste" }).getByRole("button", { name: "Non" }).click();
+  await page.getByLabel("Prénom *", { exact: true }).fill("Inès");
+  await page.getByLabel("Nom *", { exact: true }).fill("Mariée");
+  await page.getByLabel("Téléphone *", { exact: true }).fill("+352 691 000 000");
+  await page.getByLabel("E-mail *", { exact: true }).fill("ines@example.com");
+  await page.getByLabel("Vos envies, votre style, vos inspirations (facultatif)").fill("Glow naturel, lèvres nude");
+  await continuer.click();
+  await expect(page.getByText("Sur devis", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 (mariée incluse)")).toBeVisible();
+  await expect(page.getByText("Oui, souhaité", { exact: true })).toBeVisible();
+  await page.getByRole("checkbox").check();
+  await page.waitForTimeout(4200);
+  await page.getByRole("button", { name: "Demander mon devis" }).click();
+  await expect(page.getByText("Demande de devis envoyée")).toBeVisible();
+  const [b] = await sql`select b.* from bookings b join clients c on c.id = b.client_id where c.email = 'ines@example.com'`;
+  expect(b).toMatchObject({ kind: "request", status: "pending", deposit_cents: 0 });
+  expect(b.details).toMatchObject({ type: "mariage", date: day, place: "Château de Messancy", readyTime: "13:30", people: 3, trial: true, touchUps: false });
+  const sent = await (await fetch("http://localhost:54321/__sent")).json();
+  const mail = sent.find((m: { to: string[]; subject: string }) => m.to[0] === "leona@belavica.com" && m.subject.includes("devis mariage"));
+  expect(mail).toBeTruthy();
+  expect(mail.html).toContain("Château de Messancy");
+  expect(mail.reply_to).toBe("ines@example.com"); // répondre directement à la cliente avec le devis
 });
 
 test("demande de formation (planification personnalisée)", async ({ page }) => {

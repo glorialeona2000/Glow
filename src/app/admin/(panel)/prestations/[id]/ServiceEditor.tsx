@@ -45,6 +45,7 @@ export function ServiceEditor({
             <select name="booking_mode" defaultValue={s.booking_mode} className="field">
               <option value="appointment">Créneau réservable en ligne</option>
               <option value="request">Sur demande (planification personnalisée, ex. formations)</option>
+              <option value="quote">Demande de devis mariage (date, lieu, essai, retouches)</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

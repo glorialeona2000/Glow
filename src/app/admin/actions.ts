@@ -300,7 +300,8 @@ export async function saveService(_p: FormState, fd: FormData): Promise<FormStat
     const sid = id(fd);
     const name = s(fd, "name", 120);
     if (!name) return err("Nom requis.");
-    const mode = s(fd, "booking_mode") === "request" ? "request" : "appointment";
+    const raw = s(fd, "booking_mode");
+    const mode = raw === "request" || raw === "quote" ? raw : "appointment";
     const duration = n(fd, "duration_min");
     if (duration != null && (duration <= 0 || duration > 720)) return err("Durée invalide (1 à 720 minutes).");
     const highlights = s(fd, "highlights", 4000)

@@ -1,5 +1,6 @@
 import { formatPrice } from "./money";
 import { formatDateLong, formatDuration, formatTime } from "./time";
+import { weddingRows, type WeddingDetails } from "./quote";
 
 export type BookingEmailData = {
   id: string;
@@ -15,6 +16,7 @@ export type BookingEmailData = {
   deposit_cents: number;
   client_comment: string;
   preferred_schedule: string;
+  details: Partial<WeddingDetails> | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -49,6 +51,7 @@ function rows(b: BookingEmailData, ctx: Ctx, withAddress = true): [string, strin
   if (b.price_cents != null) r.push(["Prix total", formatPrice(b.price_cents)]);
   if (b.deposit_cents) r.push(["Acompte", formatPrice(b.deposit_cents)]);
   if (b.kind === "request" && b.preferred_schedule) r.push(["Disponibilités", b.preferred_schedule]);
+  r.push(...weddingRows(b.details));
   if (withAddress) r.push(["Adresse", ctx.addressNotice]);
   r.push(["Référence", b.ref]);
   return r;
@@ -92,7 +95,23 @@ function layout(title: string, intro: string, table: [string, string][], ctx: Ct
 
 const p = (s: string) => `<p style="margin:0 0 12px">${esc(s).replace(/\n/g, "<br>")}</p>`;
 
+function isQuote(b: BookingEmailData) {
+  return !!b.details?.date;
+}
+
 export function requestReceivedEmail(b: BookingEmailData, ctx: Ctx) {
+  if (isQuote(b)) {
+    return {
+      subject: "Votre demande de devis mariage — BELAVICA",
+      ...layout(
+        "Demande de devis reçue",
+        `Bonjour ${esc(b.first_name)},<br><br>Merci pour votre confiance et toutes mes félicitations pour votre mariage. J’étudie votre demande avec attention et vous envoie un devis personnalisé très prochainement.`,
+        rows(b, ctx, false),
+        ctx,
+        b.client_comment ? p(`Vos envies : ${b.client_comment}`) : "",
+      ),
+    };
+  }
   const isTraining = b.kind === "request";
   const subject = isTraining
     ? `Votre demande de formation — BELAVICA`
@@ -191,7 +210,7 @@ export function adminNewRequestEmail(b: BookingEmailData, ctx: Ctx, adminUrl: st
     ...rows(b, ctx, false),
   ];
   if (b.client_comment) table.push(["Commentaire", b.client_comment]);
-  const label = b.kind === "request" ? "Nouvelle demande de formation" : "Nouvelle demande de rendez-vous";
+  const label = isQuote(b) ? "Nouvelle demande de devis mariage" : b.kind === "request" ? "Nouvelle demande de formation" : "Nouvelle demande de rendez-vous";
   return {
     subject: `${label} — ${b.first_name} ${b.last_name}${b.starts_at ? ` · ${formatDateLong(b.starts_at)} ${formatTime(b.starts_at)}` : ""}`,
     ...layout(label, "Une nouvelle demande attend votre validation.", table, ctx, "", { href: adminUrl, label: "Ouvrir dans l’admin" }),

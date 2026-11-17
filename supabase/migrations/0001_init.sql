@@ -80,8 +80,9 @@ create table if not exists services (
   note         text not null default '',
   price_cents  int check (price_cents >= 0),
   duration_min int check (duration_min > 0 and duration_min <= 720),
-  -- appointment : créneau réservable ; request : demande de planification (formations)
-  booking_mode text not null default 'appointment' check (booking_mode in ('appointment','request')),
+  -- appointment : créneau réservable ; request : demande de planification (formations) ;
+  -- quote : demande de devis (mariage : date, lieu, essai, retouches…)
+  booking_mode text not null default 'appointment' check (booking_mode in ('appointment','request','quote')),
   sort         int  not null default 0,
   visible      boolean not null default true,
   archived_at  timestamptz,
@@ -196,6 +197,7 @@ create table if not exists bookings (
                       check (deposit_status in ('none','awaiting','received','forfeited','refunded')),
   client_comment      text not null default '',
   preferred_schedule  text not null default '',  -- pour les demandes de formation
+  details             jsonb not null default '{}', -- demande de devis mariage
   admin_note          text not null default '',
   source              text not null default 'online' check (source in ('online','admin')),
   cancelled_at        timestamptz,

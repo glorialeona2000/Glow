@@ -18,6 +18,7 @@ export type BookingRow = {
   options: { id: string; name: string; price_cents: number | null; duration_min: number }[];
   client_comment: string;
   preferred_schedule: string;
+  details: Record<string, unknown> | null;
   admin_note: string;
   source: string;
   cancelled_at: Date | null;
@@ -35,7 +36,7 @@ export type BookingRow = {
 const SELECT = (sql: ReturnType<typeof db>) => sql`
   select b.id, b.ref, b.kind, b.status, b.starts_at, b.ends_at, b.duration_min, b.price_cents, b.deposit_cents,
          b.deposit_status, b.category_name, b.service_name, b.variant_name, b.options, b.client_comment,
-         b.preferred_schedule, b.admin_note, b.source, b.cancelled_at, b.cancelled_by, b.cancellation_reason,
+         b.preferred_schedule, b.details, b.admin_note, b.source, b.cancelled_at, b.cancelled_by, b.cancellation_reason,
          b.late_cancellation, b.created_at, b.client_id, c.first_name, c.last_name, c.email, c.phone
   from bookings b left join clients c on c.id = b.client_id`;
 

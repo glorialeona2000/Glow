@@ -100,7 +100,9 @@ export default async function PrestationsPage() {
                       </div>
                       <div className="flex shrink-0 items-center justify-between gap-6 md:flex-col md:items-end md:text-right">
                         <div>
-                          {s.booking_mode === "request" ? (
+                          {s.booking_mode === "quote" ? (
+                            <p className="display text-xl">Sur devis</p>
+                          ) : s.booking_mode === "request" ? (
                             <p className="display text-xl">{s.price_cents != null ? formatPrice(s.price_cents) : "Sur demande"}</p>
                           ) : p.fromPrice != null ? (
                             <p className="display text-xl">
@@ -110,7 +112,7 @@ export default async function PrestationsPage() {
                           ) : (
                             <p className="text-sm text-mute">Tarif bientôt disponible</p>
                           )}
-                          {s.booking_mode !== "request" && p.duration != null && (
+                          {s.booking_mode === "appointment" && p.duration != null && (
                             <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-mute">
                               <Clock className="size-3.5" /> {p.hasVariants ? "dès " : ""}
                               {formatDuration(p.duration)}
@@ -119,7 +121,7 @@ export default async function PrestationsPage() {
                         </div>
                         {p.bookable && (
                           <Link href={`/reservation?prestation=${s.id}`} className="btn btn-outline min-h-11 px-5">
-                            {s.booking_mode === "request" ? "Demander" : "Réserver"} <ArrowRight className="size-3.5" />
+                            {s.booking_mode === "quote" ? "Demander un devis" : s.booking_mode === "request" ? "Demander" : "Réserver"} <ArrowRight className="size-3.5" />
                           </Link>
                         )}
                       </div>

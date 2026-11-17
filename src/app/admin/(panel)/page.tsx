@@ -61,7 +61,7 @@ export default async function Dashboard() {
               {pending.map((b) => (
                 <div key={b.id} className="flex flex-col gap-2 border-b border-ink/10 last:border-0 md:flex-row md:items-center">
                   <div className="min-w-0 flex-1"><BookingCard b={b} /></div>
-                  <PendingActions id={b.id} kind={b.kind} />
+                  <PendingActions id={b.id} kind={b.kind} quote={!!b.details?.date} />
                 </div>
               ))}
             </div>

@@ -56,7 +56,7 @@ export async function resolveSelection(
       if (!o) throw new BookingError("invalid", "Option non disponible pour cette prestation.");
       return o;
     });
-    if (service.booking_mode === "request") {
+    if (service.booking_mode !== "appointment") {
       return { service, categoryName: c.name, variant, options: [], durationMin: null, priceCents: service.price_cents };
     }
     const baseDuration = variant ? variant.duration_min : service.duration_min;
@@ -121,7 +121,7 @@ function bookingCtx(content: SiteContent, settings: Settings, bookingId?: string
 export async function getBookingEmailData(id: string): Promise<(BookingEmailData & { status: string; late: boolean }) | null> {
   const [b] = await db()<(BookingEmailData & { status: string; late: boolean })[]>`
     select b.id, b.ref, b.kind, b.status, b.late_cancellation as late, b.category_name, b.service_name, b.variant_name, b.options,
-           b.starts_at, b.duration_min, b.price_cents, b.deposit_cents, b.client_comment, b.preferred_schedule,
+           b.starts_at, b.duration_min, b.price_cents, b.deposit_cents, b.client_comment, b.preferred_schedule, b.details,
            coalesce(c.first_name, '') as first_name, coalesce(c.last_name, '') as last_name,
            coalesce(c.email, '') as email, coalesce(c.phone, '') as phone
     from bookings b left join clients c on c.id = b.client_id
@@ -140,6 +140,8 @@ export type NewBooking = {
   phone: string;
   comment: string;
   preferredSchedule?: string;
+  /** Demande de devis mariage */
+  details?: Record<string, unknown>;
   source: "online" | "admin";
   ipHash?: string;
   /** Admin : ignore horaires / délai minimum (jamais le chevauchement). */
@@ -159,7 +161,15 @@ export async function createBooking(input: NewBooking) {
   const sql = db();
   const settings = await getSettings();
   const sel = await resolveSelection(input.serviceId, input.variantId, input.optionIds, input.source === "online");
-  const isRequest = sel.service.booking_mode === "request";
+  const isRequest = sel.service.booking_mode !== "appointment";
+  const isQuote = sel.service.booking_mode === "quote";
+  if (isQuote) {
+    const d = input.details as { date?: string } | undefined;
+    if (!d?.date) throw new BookingError("invalid", "Merci d’indiquer la date de votre mariage.");
+    if (d.date < toDateStr(new Date(), settings.timezone)) throw new BookingError("invalid", "La date du mariage doit être à venir.");
+  } else {
+    input = { ...input, details: undefined };
+  }
 
   if (input.source === "online" && input.ipHash) {
     const [{ n }] = await sql<{ n: number }[]>`
@@ -216,12 +226,12 @@ export async function createBooking(input: NewBooking) {
       const [row] = await tx<{ id: string }[]>`
         insert into bookings (ref, kind, status, client_id, service_id, variant_id, category_name, service_name,
           variant_name, options, starts_at, ends_at, block_until, duration_min, price_cents, deposit_cents,
-          deposit_status, client_comment, preferred_schedule, source, ip_hash)
+          deposit_status, client_comment, preferred_schedule, details, source, ip_hash)
         values (${newRef()}, ${isRequest ? "request" : "appointment"}, ${status}, ${client.id}, ${sel.service.id},
           ${sel.variant?.id ?? null}, ${sel.categoryName}, ${sel.service.name}, ${sel.variant?.name ?? null},
           ${sql.json(optionsSnapshot)}, ${startsAt?.toISOString() ?? null}::timestamptz, ${endsAt?.toISOString() ?? null}::timestamptz,
           ${blockUntil?.toISOString() ?? null}::timestamptz, ${durationMin}, ${priceCents}, ${deposit}, ${depositStatus},
-          ${input.comment}, ${input.preferredSchedule ?? ""}, ${input.source}, ${input.ipHash ?? null})
+          ${input.comment}, ${input.preferredSchedule ?? ""}, ${sql.json((input.details ?? {}) as never)}, ${input.source}, ${input.ipHash ?? null})
         returning id`;
       return row.id;
     });
